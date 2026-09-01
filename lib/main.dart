@@ -51,6 +51,10 @@ Future<void> main() async {
   );
   if (firebaseInitError == null) {
     await notificationService.initialize();
+    // Prompts for POST_NOTIFICATIONS and, on Android 12+, the exact-alarm
+    // permission — without this the 04:00 GATE alarm and other reminders
+    // silently fall back to inexact (up to ~15 min late) delivery.
+    await notificationService.requestPermission();
   }
 
   runApp(
