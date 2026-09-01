@@ -29,6 +29,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
   RepeatRule _repeatRule = RepeatRule.daily;
   final Set<int> _customDays = {};
   bool _reminderEnabled = true;
+  bool _isAlarm = false;
   final Set<String> _selectedBlockedApps = {};
   bool _initialized = false;
 
@@ -55,6 +56,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
       ..clear()
       ..addAll(task.customDays);
     _reminderEnabled = task.reminderEnabled;
+    _isAlarm = task.isAlarm;
     _selectedBlockedApps
       ..clear()
       ..addAll(task.blockedAppPackageIds);
@@ -81,6 +83,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
       repeatRule: _repeatRule,
       customDays: _customDays.toList()..sort(),
       reminderEnabled: _reminderEnabled,
+      isAlarm: _isAlarm,
       blockedAppPackageIds: _selectedBlockedApps.toList(),
       isCompletedToday: existing?.isCompletedToday ?? false,
       notes: _notesController.text.trim(),
@@ -193,6 +196,17 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
             value: _reminderEnabled,
             onChanged: (v) => setState(() => _reminderEnabled = v),
           ),
+          if (_reminderEnabled)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Wake as alarm'),
+              subtitle: const Text(
+                'Full-screen, wakes the device, ignores silent/Do Not Disturb — '
+                'for tasks you can\'t risk sleeping through.',
+              ),
+              value: _isAlarm,
+              onChanged: (v) => setState(() => _isAlarm = v),
+            ),
           const SizedBox(height: 8),
           TextField(
             controller: _notesController,

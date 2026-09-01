@@ -3,12 +3,36 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
 import '../../auth/providers/auth_providers.dart';
+import '../../routines/data/gate_daily_schedule.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool _isLoadingSchedule = false;
+
+  Future<void> _loadDailySchedule() async {
+    setState(() => _isLoadingSchedule = true);
+    final user = ref.read(currentUserProvider);
+    final repo = ref.read(routineRepositoryProvider);
+    final notifications = ref.read(notificationServiceProvider);
+    for (final task in buildGateDailySchedule()) {
+      await repo.upsertTask(user.uid, task);
+      await notifications.scheduleTaskReminder(task);
+    }
+    if (!mounted) return;
+    setState(() => _isLoadingSchedule = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Daily schedule loaded — 10 tasks added.')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
 
     return Scaffold(
@@ -19,6 +43,22 @@ class SettingsScreen extends ConsumerWidget {
             leading: const CircleAvatar(child: Icon(Icons.person)),
             title: Text(user.displayName ?? user.email ?? 'Signed in'),
             subtitle: Text(user.email ?? ''),
+          ),
+          const Divider(),
+          ListTile(
+            leading: _isLoadingSchedule
+                ? const SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.calendar_month_outlined),
+            title: const Text('Load my daily schedule'),
+            subtitle: const Text(
+              'GATE prep, job search, TryHackMe & freelancing — 04:00–22:00. '
+              'Safe to run again; it updates the same 10 tasks.',
+            ),
+            onTap: _isLoadingSchedule ? null : _loadDailySchedule,
           ),
           const Divider(),
           ListTile(
