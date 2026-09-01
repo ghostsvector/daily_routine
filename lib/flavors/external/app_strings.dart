@@ -1,0 +1,1 @@
+String getAppTitle() => 'Daily Routine';
