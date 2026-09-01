@@ -27,7 +27,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (!mounted) return;
     setState(() => _isLoadingSchedule = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Daily schedule loaded — 10 tasks added.')),
+      const SnackBar(content: Text('Daily schedule loaded — 17 tasks added.')),
     );
   }
 
@@ -55,8 +55,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 : const Icon(Icons.calendar_month_outlined),
             title: const Text('Load my daily schedule'),
             subtitle: const Text(
-              'GATE prep, job search, TryHackMe & freelancing — 04:00–22:00. '
-              'Safe to run again; it updates the same 10 tasks.',
+              'GATE prep, job search, TryHackMe, freelancing & breaks — 04:00–22:00. '
+              'Safe to run again; it updates the same 17 tasks.',
             ),
             onTap: _isLoadingSchedule ? null : _loadDailySchedule,
           ),

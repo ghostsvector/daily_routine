@@ -41,6 +41,7 @@ class HomeScreen extends ConsumerWidget {
                 final task = tasks[index];
                 return TaskTile(
                   task: task,
+                  isLast: index == tasks.length - 1,
                   onTap: () => context.push('/task/${task.id}'),
                   onToggleCompleted: (completed) => repo.setTaskCompleted(
                     user.uid,
