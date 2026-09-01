@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- So a scheduled alarm still fires after the device reboots. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Required on Android 12+ (API 31+) to schedule exact-time reminders/alarms
+         via AndroidScheduleMode.alarmClock / exactAllowWhileIdle. On API 33+ the
+         user must still grant this via system settings ("Alarms & reminders");
+         LocalNotificationService falls back to inexact scheduling if denied. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <application
         android:label="daily_routine"
         android:name="${applicationName}"
