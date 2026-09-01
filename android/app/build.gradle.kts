@@ -9,7 +9,9 @@ plugins {
 
 android {
     namespace = "com.kasinadhsarma.dailyroutine"
-    compileSdk = flutter.compileSdkVersion
+    // 37: floor required by flutter_secure_storage; flutter.compileSdkVersion
+    // (36) isn't high enough yet.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

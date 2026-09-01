@@ -108,11 +108,9 @@ packages:
   daily_routine_sdk:
     dependency: "direct main"
     description:
-      path: "."
-      ref: main
-      resolved-ref: e38dd8e59d764fa4496c1c191f86bd057b927280
-      url: "https://github.com/kasinadhsarma/daily_routine_sdk.git"
-    source: git
+      path: "../daily_routine_sdk"
+      relative: true
+    source: path
     version: "0.1.0"
   dbus:
     dependency: transitive
