@@ -40,7 +40,11 @@ dependencies:
   flutter_dotenv: ^6.0.1
   daily_routine_sdk:
     git:
-      url: https://github.com/kasinadhsarma/daily_routine_sdk.git
+      # daily_routine_sdk is a private repo — SSH (not HTTPS) so CI can
+      # authenticate via a read-only deploy key (see .github/workflows/).
+      # Local dev never actually resolves this URL: pubspec_overrides.yaml
+      # (gitignored) always takes over with a local path instead.
+      url: git@github.com:kasinadhsarma/daily_routine_sdk.git
       ref: main
   flutter_riverpod: ^2.6.1
   go_router: ^14.6.2

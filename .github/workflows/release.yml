@@ -61,6 +61,13 @@ jobs:
           FIREBASE_LINUX_MEASUREMENT_ID=${{ secrets.FIREBASE_LINUX_MEASUREMENT_ID }}
           EOF
 
+      # daily_routine_sdk is a private repo, fetched over SSH via a
+      # read-only deploy key (see pubspec.yaml).
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SDK_DEPLOY_KEY }}
+      - run: mkdir -p ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+
       - run: flutter pub get
 
       - run: flutter analyze
