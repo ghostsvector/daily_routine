@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - run: flutter analyze
+
+      - name: Check formatting (non-blocking)
+        run: dart format --output=none --set-exit-if-changed .
+        continue-on-error: true
+
+      - name: Run tests
+        run: |
+          if [ -d test ]; then
+            flutter test
+          else
+            echo "No test/ directory, skipping."
+          fi

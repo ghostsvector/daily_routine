@@ -1,0 +1,94 @@
+name: Release
+
+# Cut a release: bump `version:` in pubspec.yaml (e.g. 1.1.0+2), merge to
+# main, then push a matching tag (the part before "+"):
+#   git tag v1.1.0 && git push origin v1.1.0
+#
+# Builds an Android release APK and a Linux .deb, and attaches both to a
+# GitHub Release for that tag.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Verify tag matches pubspec.yaml version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PUBSPEC_VERSION="$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)"
+          if [ "$TAG_VERSION" != "$PUBSPEC_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match pubspec.yaml version ($PUBSPEC_VERSION)."
+            exit 1
+          fi
+
+      - name: Write .env from repository secrets
+        run: |
+          cat > .env <<EOF
+          FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_WEB_API_KEY=${{ secrets.FIREBASE_WEB_API_KEY }}
+          FIREBASE_WEB_APP_ID=${{ secrets.FIREBASE_WEB_APP_ID }}
+          FIREBASE_WEB_AUTH_DOMAIN=${{ secrets.FIREBASE_WEB_AUTH_DOMAIN }}
+          FIREBASE_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_WEB_MEASUREMENT_ID }}
+          FIREBASE_ANDROID_API_KEY=${{ secrets.FIREBASE_ANDROID_API_KEY }}
+          FIREBASE_ANDROID_APP_ID=${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_IOS_API_KEY=${{ secrets.FIREBASE_IOS_API_KEY }}
+          FIREBASE_IOS_APP_ID=${{ secrets.FIREBASE_IOS_APP_ID }}
+          FIREBASE_BUNDLE_ID=${{ secrets.FIREBASE_BUNDLE_ID }}
+          FIREBASE_MACOS_API_KEY=${{ secrets.FIREBASE_MACOS_API_KEY }}
+          FIREBASE_MACOS_APP_ID=${{ secrets.FIREBASE_MACOS_APP_ID }}
+          FIREBASE_WINDOWS_API_KEY=${{ secrets.FIREBASE_WINDOWS_API_KEY }}
+          FIREBASE_WINDOWS_APP_ID=${{ secrets.FIREBASE_WINDOWS_APP_ID }}
+          FIREBASE_WINDOWS_AUTH_DOMAIN=${{ secrets.FIREBASE_WINDOWS_AUTH_DOMAIN }}
+          FIREBASE_WINDOWS_MEASUREMENT_ID=${{ secrets.FIREBASE_WINDOWS_MEASUREMENT_ID }}
+          FIREBASE_LINUX_API_KEY=${{ secrets.FIREBASE_LINUX_API_KEY }}
+          FIREBASE_LINUX_APP_ID=${{ secrets.FIREBASE_LINUX_APP_ID }}
+          FIREBASE_LINUX_AUTH_DOMAIN=${{ secrets.FIREBASE_LINUX_AUTH_DOMAIN }}
+          FIREBASE_LINUX_MEASUREMENT_ID=${{ secrets.FIREBASE_LINUX_MEASUREMENT_ID }}
+          EOF
+
+      - run: flutter pub get
+
+      - run: flutter analyze
+
+      - name: Build Android release APK
+        run: flutter build apk --release --dart-define=FLAVOR=external
+
+      - name: Install Linux desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev dpkg-dev
+
+      - name: Build Linux .deb
+        run: ./install_deb.sh
+
+      - name: Rename artifacts with version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p release-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "release-artifacts/daily-routine-${VERSION}.apk"
+          cp dist/*.deb "release-artifacts/daily-routine-${VERSION}_amd64.deb"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            release-artifacts/*
