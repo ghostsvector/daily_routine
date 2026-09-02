@@ -28,10 +28,11 @@ investigate and ship a fix before any public disclosure.
   [`firestore.rules`](firestore.rules) — `request.auth.uid == userId` on
   every collection under `users/{uid}`. Reports about rule gaps or auth
   bypasses are very welcome.
-- The [`chrome_extension/`](chrome_extension/) companion authenticates
-  against the same Firebase project directly from the browser (Firebase
-  Auth REST + Firestore REST) — reports about its token handling or
-  permission scope are in scope too.
+- The [Chrome extension companion](https://github.com/kasinadhsarma/daily-routine-activity-tracker)
+  authenticates against a Firebase project directly from the browser
+  (Firebase Auth REST + Firestore REST) — reports about its token handling
+  or permission scope belong on that repo's own SECURITY.md, but are
+  welcome here too if you're not sure where the boundary is.
 - Firebase Web API keys embedded in this repo (`.env.example`'s shape,
   `lib/flavors/*/firebase_options.dart`) are not secrets by Firebase's own
   security model — access control is enforced by `firestore.rules`, not by

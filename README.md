@@ -24,8 +24,10 @@ plan it.
   - **Desktop** (Linux/Windows/macOS) — focused window (app + title), which
     is usually the most useful signal: the file open in an editor, the
     video playing, the browser tab.
-  - **Browser** — a companion Chrome extension in [`chrome_extension/`](chrome_extension/)
-    logs tab sessions and YouTube watch activity.
+  - **Browser** — a companion Chrome extension,
+    [`daily-routine-activity-tracker`](https://github.com/kasinadhsarma/daily-routine-activity-tracker),
+    logs tab sessions and YouTube watch activity into the same Firestore
+    `users/{uid}/activity` collection.
 - **Auth** — email/password or Google sign-in, synced via Firebase.
 
 ## Project layout
@@ -33,8 +35,6 @@ plan it.
 - `lib/features/` — `routines/`, `blocking/`, `activity/`, `auth/`, `settings/`.
 - `lib/flavors/` — `external`/`internal` Firebase project configs, picked via
   `--dart-define=FLAVOR=`.
-- `chrome_extension/` — the browser-activity companion extension (see its
-  own [README](chrome_extension/README.md) for how to load it).
 - Platform-abstracted services (auth, Firestore data layer, app blocking,
   usage tracking, notifications) live in the companion
   [`daily_routine_sdk`](https://github.com/kasinadhsarma/daily_routine_sdk)
