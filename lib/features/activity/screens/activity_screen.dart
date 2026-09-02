@@ -123,7 +123,9 @@ class _ActivityTile extends StatelessWidget {
   String get _subtitle {
     final parts = <String>[];
     if (event.domain != null) parts.add(event.domain!);
-    if (event.packageName != null) parts.add(event.packageName!);
+    if (event.packageName != null && event.windowTitle != null) {
+      parts.add(event.packageName!);
+    }
     parts.add(_formatDuration(event.duration));
     if (event.startedAt != null) parts.add(_formatTime(event.startedAt!));
     return parts.join(' · ');
@@ -143,9 +145,10 @@ class _ActivityTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final headline = event.windowTitle ?? event.title;
     return ListTile(
       leading: Icon(_icon),
-      title: Text(event.title.isEmpty ? '(untitled)' : event.title),
+      title: Text(headline.isEmpty ? '(untitled)' : headline),
       subtitle: Text(_subtitle),
       dense: true,
     );
