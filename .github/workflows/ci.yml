@@ -22,6 +22,11 @@ jobs:
           ssh-private-key: ${{ secrets.SDK_DEPLOY_KEY }}
       - run: mkdir -p ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
+      # pubspec.yaml lists .env/.env.local as assets (gitignored, real
+      # values not needed just to analyze/test) — empty files satisfy the
+      # "asset must exist" check.
+      - run: touch .env .env.local
+
       - run: flutter pub get
 
       - run: flutter analyze

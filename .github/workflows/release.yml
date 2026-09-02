@@ -61,6 +61,11 @@ jobs:
           FIREBASE_LINUX_MEASUREMENT_ID=${{ secrets.FIREBASE_LINUX_MEASUREMENT_ID }}
           EOF
 
+      # pubspec.yaml also lists .env.local as an asset — an empty file
+      # satisfies the "asset must exist" check (it's an optional local
+      # override, nothing needs to be in it for a release build).
+      - run: touch .env.local
+
       # daily_routine_sdk is a private repo, fetched over SSH via a
       # read-only deploy key (see pubspec.yaml).
       - uses: webfactory/ssh-agent@v0.9.0
