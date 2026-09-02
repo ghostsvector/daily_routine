@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
 import '../../auth/providers/auth_providers.dart';
@@ -59,6 +60,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               'Safe to run again; it updates the same 17 tasks.',
             ),
             onTap: _isLoadingSchedule ? null : _loadDailySchedule,
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.bar_chart_outlined),
+            title: const Text('Activity'),
+            subtitle: const Text('App usage on this device & browser activity.'),
+            onTap: () => context.push('/activity'),
           ),
           const Divider(),
           ListTile(

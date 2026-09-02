@@ -18,6 +18,14 @@ final appBlockerProvider = Provider<AppBlockerService>(
   (ref) => AppBlockerService.instance,
 );
 
+final appUsageTrackerProvider = Provider<AppUsageTrackerService>(
+  (ref) => AppUsageTrackerService.instance,
+);
+
+final activityRepositoryProvider = Provider<ActivityRepositoryService>(
+  (ref) => FirestoreActivityRepositoryService(),
+);
+
 /// Initialized (async) in `main()` and supplied via `ProviderScope(overrides:
 /// ...)`, since notification-channel setup must happen before first use.
 final notificationServiceProvider = Provider<NotificationService>((ref) {

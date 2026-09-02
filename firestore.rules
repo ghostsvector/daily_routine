@@ -12,6 +12,10 @@ service cloud.firestore {
       match /blockedApps/{packageId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+
+      match /activity/{eventId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
   }
 }

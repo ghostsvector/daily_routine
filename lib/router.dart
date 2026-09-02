@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'features/activity/screens/activity_screen.dart';
 import 'features/auth/providers/auth_providers.dart';
 import 'features/auth/screens/sign_in_screen.dart';
 import 'features/auth/screens/sign_up_screen.dart';
@@ -64,6 +65,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => FocusSessionScreen(task: state.extra as RoutineTask),
       ),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
+      GoRoute(path: '/activity', builder: (context, state) => const ActivityScreen()),
     ],
   );
 });
