@@ -97,10 +97,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-
-# Local dev only: picks up unpushed daily_routine_sdk edits (e.g. the
-# compileSdk=37 fix) without needing a commit+push each time. Remove before
-# relying solely on the git dependency above.
-dependency_overrides:
-  daily_routine_sdk:
-    path: ../daily_routine_sdk
