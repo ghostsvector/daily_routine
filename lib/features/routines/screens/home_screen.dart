@@ -21,6 +21,11 @@ class HomeScreen extends ConsumerWidget {
         title: const Text('Today'),
         actions: [
           IconButton(
+            tooltip: 'Dashboard',
+            icon: const Icon(Icons.dashboard_outlined),
+            onPressed: () => context.push('/dashboard'),
+          ),
+          IconButton(
             tooltip: 'Blocked apps',
             icon: const Icon(Icons.block),
             onPressed: () => context.push('/blocked-apps'),
@@ -48,10 +53,8 @@ class HomeScreen extends ConsumerWidget {
                     task.id,
                     isCompleted: completed,
                   ),
-                  onStartFocusSession: () => context.push(
-                    '/focus-session',
-                    extra: task,
-                  ),
+                  onStartFocusSession: () =>
+                      context.push('/focus-session', extra: task),
                 );
               },
             ),

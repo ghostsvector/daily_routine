@@ -69,7 +69,10 @@ class MurthyScreen extends ConsumerWidget {
           'though this app\'s source code is.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Got it')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it'),
+          ),
         ],
       ),
     );
@@ -88,8 +91,14 @@ class MurthyScreen extends ConsumerWidget {
           'read and forge all of your Murthy data.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Show key')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Show key'),
+          ),
         ],
       ),
     );
@@ -110,7 +119,10 @@ class MurthyScreen extends ConsumerWidget {
             },
             child: const Text('Copy & close'),
           ),
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );
@@ -132,7 +144,10 @@ class _ProgressCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Today\'s progress', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Today\'s progress',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             LinearProgressIndicator(value: fraction, minHeight: 8),
             const SizedBox(height: 8),
@@ -168,7 +183,9 @@ class _VoiceAssistantCard extends ConsumerWidget {
         secondary: const Icon(Icons.mic_none_outlined),
         title: const Text('"Hey Murthy" voice assistant'),
         subtitle: Text(subtitle),
-        value: state == MurthyVoiceUiState.on || state == MurthyVoiceUiState.starting,
+        value:
+            state == MurthyVoiceUiState.on ||
+            state == MurthyVoiceUiState.starting,
         onChanged: state == MurthyVoiceUiState.starting
             ? null
             : (enabled) => enabled ? controller.enable() : controller.disable(),
@@ -210,7 +227,10 @@ class _SummaryCardState extends ConsumerState<_SummaryCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Daily summary', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Daily summary',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _controller,
@@ -241,9 +261,9 @@ class _SummaryCardState extends ConsumerState<_SummaryCard> {
     final updated = base.copyWith(summary: _controller.text);
     await ref.read(murthyRepositoryProvider).upsertProgress(user.uid, updated);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Summary saved')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Summary saved')));
   }
 }
 
@@ -263,7 +283,10 @@ class _ProtocolsSection extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Daily protocols', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Daily protocols',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 IconButton(
                   icon: const Icon(Icons.add),
                   tooltip: 'Add protocol',
@@ -276,7 +299,9 @@ class _ProtocolsSection extends ConsumerWidget {
                 if (protocols.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text('No protocols yet — add one you want to hold yourself to daily.'),
+                    child: Text(
+                      'No protocols yet — add one you want to hold yourself to daily.',
+                    ),
                   );
                 }
                 return Column(
@@ -300,9 +325,15 @@ class _ProtocolsSection extends ConsumerWidget {
     );
   }
 
-  static void _showEditDialog(BuildContext context, WidgetRef ref, {DailyProtocol? existing}) {
+  static void _showEditDialog(
+    BuildContext context,
+    WidgetRef ref, {
+    DailyProtocol? existing,
+  }) {
     final titleController = TextEditingController(text: existing?.title ?? '');
-    final descController = TextEditingController(text: existing?.description ?? '');
+    final descController = TextEditingController(
+      text: existing?.description ?? '',
+    );
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -317,7 +348,9 @@ class _ProtocolsSection extends ConsumerWidget {
             ),
             TextField(
               controller: descController,
-              decoration: const InputDecoration(labelText: 'Description (optional)'),
+              decoration: const InputDecoration(
+                labelText: 'Description (optional)',
+              ),
               maxLines: 2,
             ),
           ],
@@ -338,7 +371,9 @@ class _ProtocolsSection extends ConsumerWidget {
                 isActive: existing?.isActive ?? true,
                 createdAt: existing?.createdAt,
               );
-              await ref.read(murthyRepositoryProvider).upsertProtocol(user.uid, protocol);
+              await ref
+                  .read(murthyRepositoryProvider)
+                  .upsertProtocol(user.uid, protocol);
               if (dialogContext.mounted) Navigator.pop(dialogContext);
             },
             child: const Text('Save'),
@@ -369,17 +404,22 @@ class _ProtocolTile extends ConsumerWidget {
         },
       ),
       title: Text(protocol.title),
-      subtitle: protocol.description.isEmpty ? null : Text(protocol.description),
+      subtitle: protocol.description.isEmpty
+          ? null
+          : Text(protocol.description),
       trailing: IconButton(
         icon: const Icon(Icons.delete_outline),
         tooltip: 'Delete',
         onPressed: () {
           final user = ref.read(currentUserProvider);
           if (user.isEmpty) return;
-          ref.read(murthyRepositoryProvider).deleteProtocol(user.uid, protocol.id);
+          ref
+              .read(murthyRepositoryProvider)
+              .deleteProtocol(user.uid, protocol.id);
         },
       ),
-      onTap: () => _ProtocolsSection._showEditDialog(context, ref, existing: protocol),
+      onTap: () =>
+          _ProtocolsSection._showEditDialog(context, ref, existing: protocol),
     );
   }
 }

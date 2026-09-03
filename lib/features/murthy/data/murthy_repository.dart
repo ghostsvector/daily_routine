@@ -4,7 +4,8 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:daily_routine_sdk/config/rest_firebase_config.dart';
 import 'package:daily_routine_sdk/firestore_rest/firestore_rest_codec.dart';
-import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:http/http.dart' as http;
 
 import '../models/daily_progress_entry.dart';
@@ -22,12 +23,18 @@ import 'murthy_crypto_service.dart';
 /// Firestore REST API directly instead, exactly like
 /// `FirestoreRoutineRepositoryService` does for routine tasks.
 class MurthyRepository {
-  factory MurthyRepository({FirebaseFirestore? firestore, MurthyCryptoService? crypto}) {
+  factory MurthyRepository({
+    FirebaseFirestore? firestore,
+    MurthyCryptoService? crypto,
+  }) {
     final cryptoService = crypto ?? MurthyCryptoService();
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
       return MurthyRepository._(_RestMurthyBackend(), cryptoService);
     }
-    return MurthyRepository._(_FirestoreMurthyBackend(firestore ?? FirebaseFirestore.instance), cryptoService);
+    return MurthyRepository._(
+      _FirestoreMurthyBackend(firestore ?? FirebaseFirestore.instance),
+      cryptoService,
+    );
   }
 
   MurthyRepository._(this._backend, this._crypto);
@@ -92,7 +99,11 @@ abstract class _MurthyBackend {
   Future<void> upsertProtocol(String uid, String id, Map<String, dynamic> data);
   Future<void> deleteProtocol(String uid, String id);
   Stream<Map<String, dynamic>?> watchProgress(String uid, String dateKey);
-  Future<void> upsertProgress(String uid, String dateKey, Map<String, dynamic> data);
+  Future<void> upsertProgress(
+    String uid,
+    String dateKey,
+    Map<String, dynamic> data,
+  );
 }
 
 class _FirestoreMurthyBackend implements _MurthyBackend {
@@ -103,22 +114,33 @@ class _FirestoreMurthyBackend implements _MurthyBackend {
   CollectionReference<Map<String, dynamic>> _protocols(String uid) =>
       _firestore.collection('users').doc(uid).collection('murthyProtocols');
 
-  DocumentReference<Map<String, dynamic>> _progressDoc(String uid, String dateKey) =>
-      _firestore.collection('users').doc(uid).collection('murthyProgress').doc(dateKey);
+  DocumentReference<Map<String, dynamic>> _progressDoc(
+    String uid,
+    String dateKey,
+  ) => _firestore
+      .collection('users')
+      .doc(uid)
+      .collection('murthyProgress')
+      .doc(dateKey);
 
   @override
   Stream<List<_MurthyDoc>> watchProtocols(String uid) {
     return _protocols(uid).snapshots().map(
-      (snapshot) => snapshot.docs.map((d) => _MurthyDoc(d.id, d.data())).toList(),
+      (snapshot) =>
+          snapshot.docs.map((d) => _MurthyDoc(d.id, d.data())).toList(),
     );
   }
 
   @override
-  Future<void> upsertProtocol(String uid, String id, Map<String, dynamic> data) =>
-      _protocols(uid).doc(id).set(data);
+  Future<void> upsertProtocol(
+    String uid,
+    String id,
+    Map<String, dynamic> data,
+  ) => _protocols(uid).doc(id).set(data);
 
   @override
-  Future<void> deleteProtocol(String uid, String id) => _protocols(uid).doc(id).delete();
+  Future<void> deleteProtocol(String uid, String id) =>
+      _protocols(uid).doc(id).delete();
 
   @override
   Stream<Map<String, dynamic>?> watchProgress(String uid, String dateKey) {
@@ -126,8 +148,11 @@ class _FirestoreMurthyBackend implements _MurthyBackend {
   }
 
   @override
-  Future<void> upsertProgress(String uid, String dateKey, Map<String, dynamic> data) =>
-      _progressDoc(uid, dateKey).set(data);
+  Future<void> upsertProgress(
+    String uid,
+    String dateKey,
+    Map<String, dynamic> data,
+  ) => _progressDoc(uid, dateKey).set(data);
 }
 
 /// REST fallback for Linux desktop — see [MurthyRepository]'s doc comment.
@@ -135,16 +160,18 @@ class _FirestoreMurthyBackend implements _MurthyBackend {
 /// poll rather than push (plain REST has no equivalent to Firestore's
 /// gRPC/HTTP2 Listen API).
 class _RestMurthyBackend implements _MurthyBackend {
-  _RestMurthyBackend({http.Client? client, this.pollInterval = const Duration(seconds: 10)})
-    : _client = client ?? http.Client();
+  _RestMurthyBackend({http.Client? client}) : _client = client ?? http.Client();
+
+  static const pollInterval = Duration(seconds: 10);
 
   final http.Client _client;
-  final Duration pollInterval;
 
-  final Map<String, StreamController<List<_MurthyDoc>>> _protocolControllers = {};
+  final Map<String, StreamController<List<_MurthyDoc>>> _protocolControllers =
+      {};
   final Map<String, Timer> _protocolTimers = {};
 
-  final Map<String, StreamController<Map<String, dynamic>?>> _progressControllers = {};
+  final Map<String, StreamController<Map<String, dynamic>?>>
+  _progressControllers = {};
   final Map<String, Timer> _progressTimers = {};
 
   String _protocolsUrl(String uid) =>
@@ -173,7 +200,10 @@ class _RestMurthyBackend implements _MurthyBackend {
     late final StreamController<List<_MurthyDoc>> controller;
     controller = StreamController<List<_MurthyDoc>>.broadcast(
       onListen: () {
-        _protocolTimers[uid] ??= Timer.periodic(pollInterval, (_) => _pollProtocols(uid));
+        _protocolTimers[uid] ??= Timer.periodic(
+          pollInterval,
+          (_) => _pollProtocols(uid),
+        );
         unawaited(_pollProtocols(uid));
       },
       onCancel: () {
@@ -189,10 +219,15 @@ class _RestMurthyBackend implements _MurthyBackend {
     final controller = _protocolControllers[uid];
     if (controller == null || controller.isClosed) return;
     try {
-      final response = await _client.get(Uri.parse(_protocolsUrl(uid)), headers: await _headers());
+      final response = await _client.get(
+        Uri.parse(_protocolsUrl(uid)),
+        headers: await _headers(),
+      );
       if (response.statusCode != 200) {
         controller.addError(
-          StateError('Firestore REST watchProtocols failed: ${response.statusCode} ${response.body}'),
+          StateError(
+            'Firestore REST watchProtocols failed: ${response.statusCode} ${response.body}',
+          ),
         );
         return;
       }
@@ -211,14 +246,20 @@ class _RestMurthyBackend implements _MurthyBackend {
   }
 
   @override
-  Future<void> upsertProtocol(String uid, String id, Map<String, dynamic> data) async {
+  Future<void> upsertProtocol(
+    String uid,
+    String id,
+    Map<String, dynamic> data,
+  ) async {
     final response = await _client.patch(
       Uri.parse('${_protocolsUrl(uid)}/${Uri.encodeComponent(id)}'),
       headers: await _headers(),
       body: jsonEncode({'fields': encodeFirestoreFields(data)}),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError('Firestore REST upsertProtocol failed: ${response.statusCode} ${response.body}');
+      throw StateError(
+        'Firestore REST upsertProtocol failed: ${response.statusCode} ${response.body}',
+      );
     }
   }
 
@@ -228,8 +269,12 @@ class _RestMurthyBackend implements _MurthyBackend {
       Uri.parse('${_protocolsUrl(uid)}/${Uri.encodeComponent(id)}'),
       headers: await _headers(),
     );
-    if (response.statusCode != 200 && response.statusCode != 204 && response.statusCode != 404) {
-      throw StateError('Firestore REST deleteProtocol failed: ${response.statusCode} ${response.body}');
+    if (response.statusCode != 200 &&
+        response.statusCode != 204 &&
+        response.statusCode != 404) {
+      throw StateError(
+        'Firestore REST deleteProtocol failed: ${response.statusCode} ${response.body}',
+      );
     }
   }
 
@@ -242,7 +287,10 @@ class _RestMurthyBackend implements _MurthyBackend {
     late final StreamController<Map<String, dynamic>?> controller;
     controller = StreamController<Map<String, dynamic>?>.broadcast(
       onListen: () {
-        _progressTimers[key] ??= Timer.periodic(pollInterval, (_) => _pollProgress(uid, dateKey));
+        _progressTimers[key] ??= Timer.periodic(
+          pollInterval,
+          (_) => _pollProgress(uid, dateKey),
+        );
         unawaited(_pollProgress(uid, dateKey));
       },
       onCancel: () {
@@ -269,7 +317,9 @@ class _RestMurthyBackend implements _MurthyBackend {
       }
       if (response.statusCode != 200) {
         controller.addError(
-          StateError('Firestore REST watchProgress failed: ${response.statusCode} ${response.body}'),
+          StateError(
+            'Firestore REST watchProgress failed: ${response.statusCode} ${response.body}',
+          ),
         );
         return;
       }
@@ -281,14 +331,20 @@ class _RestMurthyBackend implements _MurthyBackend {
   }
 
   @override
-  Future<void> upsertProgress(String uid, String dateKey, Map<String, dynamic> data) async {
+  Future<void> upsertProgress(
+    String uid,
+    String dateKey,
+    Map<String, dynamic> data,
+  ) async {
     final response = await _client.patch(
       Uri.parse(_progressDocUrl(uid, dateKey)),
       headers: await _headers(),
       body: jsonEncode({'fields': encodeFirestoreFields(data)}),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError('Firestore REST upsertProgress failed: ${response.statusCode} ${response.body}');
+      throw StateError(
+        'Firestore REST upsertProgress failed: ${response.statusCode} ${response.body}',
+      );
     }
   }
 }

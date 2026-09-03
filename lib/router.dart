@@ -9,6 +9,7 @@ import 'features/auth/screens/sign_in_screen.dart';
 import 'features/auth/screens/sign_up_screen.dart';
 import 'features/blocking/screens/blocked_apps_screen.dart';
 import 'features/blocking/screens/focus_session_screen.dart';
+import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/murthy/screens/murthy_screen.dart';
 import 'features/routines/screens/edit_task_screen.dart';
 import 'features/routines/screens/home_screen.dart';
@@ -40,14 +41,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!authValue.hasValue) return null;
       final isLoggedIn = authValue.value?.isNotEmpty ?? false;
       final isAuthRoute =
-          state.matchedLocation == '/sign-in' || state.matchedLocation == '/sign-up';
+          state.matchedLocation == '/sign-in' ||
+          state.matchedLocation == '/sign-up';
       if (!isLoggedIn && !isAuthRoute) return '/sign-in';
       if (isLoggedIn && isAuthRoute) return '/';
       return null;
     },
     routes: [
-      GoRoute(path: '/sign-in', builder: (context, state) => const SignInScreen()),
-      GoRoute(path: '/sign-up', builder: (context, state) => const SignUpScreen()),
+      GoRoute(
+        path: '/sign-in',
+        builder: (context, state) => const SignInScreen(),
+      ),
+      GoRoute(
+        path: '/sign-up',
+        builder: (context, state) => const SignUpScreen(),
+      ),
       GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
       GoRoute(
         path: '/task/new',
@@ -55,7 +63,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/task/:id',
-        builder: (context, state) => EditTaskScreen(taskId: state.pathParameters['id']),
+        builder: (context, state) =>
+            EditTaskScreen(taskId: state.pathParameters['id']),
       ),
       GoRoute(
         path: '/blocked-apps',
@@ -63,11 +72,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/focus-session',
-        builder: (context, state) => FocusSessionScreen(task: state.extra as RoutineTask),
+        builder: (context, state) =>
+            FocusSessionScreen(task: state.extra as RoutineTask),
       ),
-      GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
-      GoRoute(path: '/activity', builder: (context, state) => const ActivityScreen()),
-      GoRoute(path: '/murthy', builder: (context, state) => const MurthyScreen()),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/activity',
+        builder: (context, state) => const ActivityScreen(),
+      ),
+      GoRoute(
+        path: '/murthy',
+        builder: (context, state) => const MurthyScreen(),
+      ),
+      GoRoute(
+        path: '/dashboard',
+        builder: (context, state) => const DashboardScreen(),
+      ),
     ],
   );
 });

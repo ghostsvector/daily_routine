@@ -31,5 +31,5 @@ class MurthyVoiceController extends StateNotifier<MurthyVoiceUiState> {
 
 final murthyVoiceControllerProvider =
     StateNotifierProvider<MurthyVoiceController, MurthyVoiceUiState>(
-  (ref) => MurthyVoiceController(),
-);
+      (ref) => MurthyVoiceController(),
+    );

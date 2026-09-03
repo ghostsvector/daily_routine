@@ -37,8 +37,8 @@ class DailyProgressEntry {
     return DailyProgressEntry(
       date: json['date'] as String,
       summary: json['summary'] as String? ?? '',
-      keptProtocolIds:
-          (json['keptProtocolIds'] as List<dynamic>? ?? const []).cast<String>(),
+      keptProtocolIds: (json['keptProtocolIds'] as List<dynamic>? ?? const [])
+          .cast<String>(),
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'] as String)
           : null,

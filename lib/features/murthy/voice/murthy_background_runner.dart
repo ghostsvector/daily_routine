@@ -1,5 +1,6 @@
 import 'package:daily_routine_sdk/daily_routine_sdk.dart';
-import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -28,7 +29,9 @@ class MurthyBackgroundRunner {
   static MurthyVoiceService? _desktopService;
 
   static bool get _isMobile =>
-      !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
 
   static Future<bool> start() async {
     if (_isMobile) {
@@ -66,12 +69,15 @@ class MurthyBackgroundRunner {
     // flutter_background_service requires the Android notification channel
     // to already exist before configure() is called.
     await FlutterLocalNotificationsPlugin()
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(
           const AndroidNotificationChannel(
             _mobileNotificationChannelId,
             'Murthy voice assistant',
-            description: 'Shown while "Hey Murthy" is listening in the background.',
+            description:
+                'Shown while "Hey Murthy" is listening in the background.',
             importance: Importance.low,
           ),
         );
@@ -87,7 +93,10 @@ class MurthyBackgroundRunner {
         initialNotificationContent: 'Listening for "Hey Murthy"',
         foregroundServiceTypes: const [AndroidForegroundType.microphone],
       ),
-      iosConfiguration: IosConfiguration(onForeground: _onMobileServiceStart, onBackground: _onIosBackground),
+      iosConfiguration: IosConfiguration(
+        onForeground: _onMobileServiceStart,
+        onBackground: _onIosBackground,
+      ),
     );
     return service.startService();
   }

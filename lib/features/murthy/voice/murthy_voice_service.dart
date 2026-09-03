@@ -12,7 +12,13 @@ import '../providers/murthy_providers.dart' show todayKey;
 import 'murthy_wakeword_engine.dart';
 import 'murthy_wakeword_models.dart';
 
-enum MurthyVoiceStatus { stopped, starting, listeningForWakeWord, respondingToCommand, unavailable }
+enum MurthyVoiceStatus {
+  stopped,
+  starting,
+  listeningForWakeWord,
+  respondingToCommand,
+  unavailable,
+}
 
 /// Core "Hey Murthy" logic: wake-word detection (openWakeWord, run locally
 /// via ONNX Runtime — see `murthy_wakeword_engine.dart`) → spoken
@@ -51,7 +57,9 @@ class MurthyVoiceService {
     _statusController.add(status);
   }
 
-  bool get isRunning => _status != MurthyVoiceStatus.stopped && _status != MurthyVoiceStatus.unavailable;
+  bool get isRunning =>
+      _status != MurthyVoiceStatus.stopped &&
+      _status != MurthyVoiceStatus.unavailable;
 
   /// Starts always-on wake-word listening. Returns `false` (and leaves
   /// status at [MurthyVoiceStatus.unavailable]) if the ONNX models aren't
@@ -79,7 +87,11 @@ class MurthyVoiceService {
     _engine = MurthyWakewordEngine(models);
 
     final audioStream = await _recorder.startStream(
-      const RecordConfig(encoder: AudioEncoder.pcm16bits, sampleRate: 16000, numChannels: 1),
+      const RecordConfig(
+        encoder: AudioEncoder.pcm16bits,
+        sampleRate: 16000,
+        numChannels: 1,
+      ),
     );
     _audioSubscription = audioStream.listen(_onAudioChunk);
 
@@ -104,7 +116,10 @@ class MurthyVoiceService {
     final engine = _engine;
     if (engine == null) return;
 
-    final samples = bytes.buffer.asInt16List(bytes.offsetInBytes, bytes.lengthInBytes ~/ 2);
+    final samples = bytes.buffer.asInt16List(
+      bytes.offsetInBytes,
+      bytes.lengthInBytes ~/ 2,
+    );
     final scores = await engine.pushAudio(samples);
     if (scores.any((score) => score >= engine.detectionThreshold)) {
       await _onWakeWordDetected();
@@ -154,7 +169,11 @@ class MurthyVoiceService {
 
     if (isRunning) {
       final audioStream = await _recorder.startStream(
-        const RecordConfig(encoder: AudioEncoder.pcm16bits, sampleRate: 16000, numChannels: 1),
+        const RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          sampleRate: 16000,
+          numChannels: 1,
+        ),
       );
       _audioSubscription = audioStream.listen(_onAudioChunk);
     }

@@ -29,7 +29,9 @@ class MurthyWakewordModels {
     final melspecBytes = await _tryLoadAsset(_melspecAsset);
     final embeddingBytes = await _tryLoadAsset(_embeddingAsset);
     final wakewordBytes = await _tryLoadAsset(_wakewordAsset);
-    if (melspecBytes == null || embeddingBytes == null || wakewordBytes == null) {
+    if (melspecBytes == null ||
+        embeddingBytes == null ||
+        wakewordBytes == null) {
       return null;
     }
 

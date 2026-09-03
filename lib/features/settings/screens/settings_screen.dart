@@ -63,16 +63,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.dashboard_outlined),
+            title: const Text('Dashboard'),
+            subtitle: const Text(
+              'Today\'s task progress and a usage breakdown.',
+            ),
+            onTap: () => context.push('/dashboard'),
+          ),
+          const Divider(),
+          ListTile(
             leading: const Icon(Icons.bar_chart_outlined),
             title: const Text('Activity'),
-            subtitle: const Text('App usage on this device & browser activity.'),
+            subtitle: const Text(
+              'App usage on this device & browser activity.',
+            ),
             onTap: () => context.push('/activity'),
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.fact_check_outlined),
             title: const Text('Murthy'),
-            subtitle: const Text('Daily progress, summary & protocols — encrypted on this device.'),
+            subtitle: const Text(
+              'Daily progress, summary & protocols — encrypted on this device.',
+            ),
             onTap: () => context.push('/murthy'),
           ),
           const Divider(),

@@ -13,7 +13,9 @@ String todayKey() {
   return '${now.year}-$month-$day';
 }
 
-final murthyRepositoryProvider = Provider<MurthyRepository>((ref) => MurthyRepository());
+final murthyRepositoryProvider = Provider<MurthyRepository>(
+  (ref) => MurthyRepository(),
+);
 
 final dailyProtocolsProvider = StreamProvider<List<DailyProtocol>>((ref) {
   final user = ref.watch(currentUserProvider);
@@ -24,7 +26,9 @@ final dailyProtocolsProvider = StreamProvider<List<DailyProtocol>>((ref) {
 final todayProgressProvider = StreamProvider<DailyProgressEntry>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user.isEmpty) return const Stream.empty();
-  return ref.watch(murthyRepositoryProvider).watchProgress(user.uid, todayKey());
+  return ref
+      .watch(murthyRepositoryProvider)
+      .watchProgress(user.uid, todayKey());
 });
 
 /// Today's routine-completion count, computed locally from the existing

@@ -16,11 +16,7 @@ class DailyProtocol {
   final bool isActive;
   final DateTime? createdAt;
 
-  DailyProtocol copyWith({
-    String? title,
-    String? description,
-    bool? isActive,
-  }) {
+  DailyProtocol copyWith({String? title, String? description, bool? isActive}) {
     return DailyProtocol(
       id: id,
       title: title ?? this.title,

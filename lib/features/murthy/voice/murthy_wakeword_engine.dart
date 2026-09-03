@@ -86,7 +86,9 @@ class MurthyWakewordEngine {
     }
     if (_melFrames.length < _embeddingWindowFrames) return null;
 
-    final window = _melFrames.sublist(_melFrames.length - _embeddingWindowFrames);
+    final window = _melFrames.sublist(
+      _melFrames.length - _embeddingWindowFrames,
+    );
     final embedding = await _runEmbedding(window);
     _embeddings.add(embedding);
     if (_embeddings.length > _maxEmbeddings) {
@@ -94,7 +96,9 @@ class MurthyWakewordEngine {
     }
     if (_embeddings.length < _embeddingSequenceLength) return null;
 
-    final sequence = _embeddings.sublist(_embeddings.length - _embeddingSequenceLength);
+    final sequence = _embeddings.sublist(
+      _embeddings.length - _embeddingSequenceLength,
+    );
     return _runWakeword(sequence);
   }
 
@@ -104,10 +108,9 @@ class MurthyWakewordEngine {
       [1, rawSamples.length],
     );
     final runOptions = OrtRunOptions();
-    final outputs = await _models.melspectrogram.runAsync(
-      runOptions,
-      {_models.melspectrogram.inputNames.first: input},
-    );
+    final outputs = await _models.melspectrogram.runAsync(runOptions, {
+      _models.melspectrogram.inputNames.first: input,
+    });
     input.release();
     runOptions.release();
 
@@ -128,10 +131,9 @@ class MurthyWakewordEngine {
       [1, _embeddingWindowFrames, _melBins, 1],
     );
     final runOptions = OrtRunOptions();
-    final outputs = await _models.embedding.runAsync(
-      runOptions,
-      {_models.embedding.inputNames.first: input},
-    );
+    final outputs = await _models.embedding.runAsync(runOptions, {
+      _models.embedding.inputNames.first: input,
+    });
     input.release();
     runOptions.release();
 
@@ -143,16 +145,17 @@ class MurthyWakewordEngine {
   }
 
   Future<double> _runWakeword(List<List<double>> sequence) async {
-    final flatSequence = <double>[for (final embedding in sequence) ...embedding];
+    final flatSequence = <double>[
+      for (final embedding in sequence) ...embedding,
+    ];
     final input = OrtValueTensor.createTensorWithDataList(
       Float32List.fromList(flatSequence),
       [1, _embeddingSequenceLength, sequence.first.length],
     );
     final runOptions = OrtRunOptions();
-    final outputs = await _models.wakeword.runAsync(
-      runOptions,
-      {_models.wakeword.inputNames.first: input},
-    );
+    final outputs = await _models.wakeword.runAsync(runOptions, {
+      _models.wakeword.inputNames.first: input,
+    });
     input.release();
     runOptions.release();
 
