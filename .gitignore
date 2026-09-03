@@ -37,6 +37,11 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+
+# ./install_deb.sh output — a built artifact, not source. The release
+# workflow builds this fresh per tag; a stale committed one previously
+# broke the "Rename artifacts" step (dist/*.deb matched two files).
+/dist/
 pubspec_overrides.yaml
 
 # Symbolication related
