@@ -8,7 +8,6 @@ import '../data/murthy_crypto_service.dart';
 import '../models/daily_progress_entry.dart';
 import '../models/daily_protocol.dart';
 import '../providers/murthy_providers.dart';
-import '../voice/murthy_voice_controller.dart';
 
 /// "Murthy" — today's progress, a daily summary note, and the recurring
 /// daily protocols you're holding yourself to. Everything here is
@@ -46,8 +45,6 @@ class MurthyScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _ProgressCard(completed: completed, total: total),
-          const SizedBox(height: 16),
-          const _VoiceAssistantCard(),
           const SizedBox(height: 16),
           _SummaryCard(progressAsync: progressAsync),
           const SizedBox(height: 16),
@@ -154,41 +151,6 @@ class _ProgressCard extends StatelessWidget {
             Text('$completed of $total tasks completed'),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _VoiceAssistantCard extends ConsumerWidget {
-  const _VoiceAssistantCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(murthyVoiceControllerProvider);
-    final controller = ref.read(murthyVoiceControllerProvider.notifier);
-
-    final subtitle = switch (state) {
-      MurthyVoiceUiState.off =>
-        'Say "Hey Murthy" to ask for your progress, protocols, or summary.',
-      MurthyVoiceUiState.starting => 'Starting…',
-      MurthyVoiceUiState.on =>
-        'Listening in the background — mic access is shown by the system while active.',
-      MurthyVoiceUiState.unavailable =>
-        'Not set up yet: add the wake-word ONNX models (and grant mic access) '
-            '— see assets/murthy/onnx/README.md.',
-    };
-
-    return Card(
-      child: SwitchListTile(
-        secondary: const Icon(Icons.mic_none_outlined),
-        title: const Text('"Hey Murthy" voice assistant'),
-        subtitle: Text(subtitle),
-        value:
-            state == MurthyVoiceUiState.on ||
-            state == MurthyVoiceUiState.starting,
-        onChanged: state == MurthyVoiceUiState.starting
-            ? null
-            : (enabled) => enabled ? controller.enable() : controller.disable(),
       ),
     );
   }

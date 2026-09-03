@@ -9,15 +9,6 @@
          user must still grant this via system settings ("Alarms & reminders");
          LocalNotificationService falls back to inexact scheduling if denied. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <!-- "Hey Murthy" always-on wake-word listening: mic access, plus the
-         foreground-service permissions Android 14+ (API 34+) requires for a
-         service that keeps recording while the app is backgrounded. Shows a
-         persistent notification while active — required by Android, and a
-         plain signal to the user that the mic is live. -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:label="daily_routine"
         android:name="${applicationName}"
@@ -51,12 +42,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- flutter_background_service: keeps the "Hey Murthy" wake-word
-             listener alive while the app is backgrounded. Runs as a
-             microphone-type foreground service, per Android 14+ rules. -->
-        <service
-            android:name="id.flutter.flutter_background_service.BackgroundService"
-            android:foregroundServiceType="microphone" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
