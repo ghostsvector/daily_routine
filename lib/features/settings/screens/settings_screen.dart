@@ -70,6 +70,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.fact_check_outlined),
+            title: const Text('Murthy'),
+            subtitle: const Text('Daily progress, summary & protocols — encrypted on this device.'),
+            onTap: () => context.push('/murthy'),
+          ),
+          const Divider(),
+          ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Sign out'),
             onTap: () => ref.read(authServiceProvider).signOut(),

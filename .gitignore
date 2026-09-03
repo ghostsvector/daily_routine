@@ -27,6 +27,10 @@ migrate_working_dir/
 .env
 .env.local
 
+# "Hey Murthy" wake-word ONNX models — not shareable code, and the custom
+# one is a trained binary, not source. See assets/murthy/onnx/README.md.
+assets/murthy/onnx/*.onnx
+
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id

@@ -26,6 +26,14 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Murthy listens for "Hey Murthy" so it can respond to your voice, and to transcribe your command once it wakes.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Murthy uses speech recognition to understand the command you give it after saying "Hey Murthy".</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

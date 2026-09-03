@@ -9,6 +9,7 @@ import 'features/auth/screens/sign_in_screen.dart';
 import 'features/auth/screens/sign_up_screen.dart';
 import 'features/blocking/screens/blocked_apps_screen.dart';
 import 'features/blocking/screens/focus_session_screen.dart';
+import 'features/murthy/screens/murthy_screen.dart';
 import 'features/routines/screens/edit_task_screen.dart';
 import 'features/routines/screens/home_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
@@ -66,6 +67,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
       GoRoute(path: '/activity', builder: (context, state) => const ActivityScreen()),
+      GoRoute(path: '/murthy', builder: (context, state) => const MurthyScreen()),
     ],
   );
 });
