@@ -31,15 +31,19 @@ bool _isToday(DateTime? time) {
 }
 
 /// Today's activity events only, pulled from the same feed the Activity
-/// screen uses but with a much higher limit — a busy day can log hundreds
-/// of short browser/app sessions, more than that screen's default page
-/// size.
+/// screen uses but with a higher limit — a busy day can log hundreds of
+/// short browser/app sessions, more than that screen's default page size.
+/// Kept well under the Activity screen's headroom (not e.g. 2000): on
+/// Linux this polls Firestore's REST API every 30s (see
+/// `RestActivityRepositoryService`), and each poll's read cost scales
+/// directly with this limit — too high a number here burns through
+/// Firestore's free-tier daily read quota in hours, not days.
 final todayActivityProvider = StreamProvider<List<ActivityEvent>>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user.isEmpty) return const Stream.empty();
   return ref
       .watch(activityRepositoryProvider)
-      .watchRecentActivity(user.uid, limit: 2000)
+      .watchRecentActivity(user.uid, limit: 500)
       .map((events) => events.where((e) => _isToday(e.startedAt)).toList());
 });
 
