@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
+import '../../activity/providers/activity_providers.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../providers/routine_providers.dart';
 import '../widgets/task_tile.dart';
@@ -15,6 +16,10 @@ class HomeScreen extends ConsumerWidget {
     final tasks = ref.watch(todaysTasksProvider);
     final user = ref.watch(currentUserProvider);
     final repo = ref.watch(routineRepositoryProvider);
+    // Fire-and-forget: folds past days' activity into summaries and prunes
+    // the raw log. Not read here — just needs to be watched once so it
+    // actually runs (see activityRolloverProvider's doc comment).
+    ref.watch(activityRolloverProvider);
 
     return Scaffold(
       appBar: AppBar(

@@ -5,6 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
 import '../../auth/providers/auth_providers.dart';
+import '../data/activity_rollover_service.dart';
+
+/// Runs once per app session (not per screen — this isn't `autoDispose`)
+/// to fold any past days' raw activity into summaries and prune them. See
+/// `runActivityRollover`'s doc comment for why this exists.
+final activityRolloverProvider = FutureProvider<void>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user.isEmpty) return;
+  await runActivityRollover(ref.watch(activityRepositoryProvider), user.uid);
+});
 
 final activityTrackingSupportedProvider = FutureProvider<bool>((ref) {
   return ref.watch(appUsageTrackerProvider).isSupported();
