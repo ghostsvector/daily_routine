@@ -86,6 +86,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
       isAlarm: _isAlarm,
       blockedAppPackageIds: _selectedBlockedApps.toList(),
       isCompletedToday: existing?.isCompletedToday ?? false,
+      completedDate: existing?.completedDate,
       notes: _notesController.text.trim(),
       createdAt: existing?.createdAt,
     );

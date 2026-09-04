@@ -35,6 +35,6 @@ final todayProgressProvider = StreamProvider<DailyProgressEntry>((ref) {
 /// task stream — this never touches the network on its own.
 final todayRoutineStatsProvider = Provider<(int completed, int total)>((ref) {
   final todays = ref.watch(todaysTasksProvider);
-  final completed = todays.where((t) => t.isCompletedToday).length;
+  final completed = todays.where((t) => t.isCompletedForToday).length;
   return (completed, todays.length);
 });

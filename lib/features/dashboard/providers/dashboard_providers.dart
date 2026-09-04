@@ -105,6 +105,6 @@ final dashboardRoutineStatsProvider = Provider<(int completed, int total)>((
   ref,
 ) {
   final todays = ref.watch(todaysTasksProvider);
-  final completed = todays.where((t) => t.isCompletedToday).length;
+  final completed = todays.where((t) => t.isCompletedForToday).length;
   return (completed, todays.length);
 });

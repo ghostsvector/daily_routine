@@ -55,7 +55,7 @@ class TaskTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = _colorFor(task.category, theme.colorScheme);
-    final completed = task.isCompletedToday;
+    final completed = task.isCompletedForToday;
 
     return InkWell(
       onTap: onTap,
