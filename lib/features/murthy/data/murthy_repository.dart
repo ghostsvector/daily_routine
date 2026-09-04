@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:daily_routine_sdk/config/rest_firebase_config.dart';
@@ -162,7 +163,8 @@ class _FirestoreMurthyBackend implements _MurthyBackend {
 class _RestMurthyBackend implements _MurthyBackend {
   _RestMurthyBackend({http.Client? client}) : _client = client ?? http.Client();
 
-  static const pollInterval = Duration(seconds: 10);
+  static const pollInterval = Duration(seconds: 60);
+  static const _logName = 'MurthyRepository(REST)';
 
   final http.Client _client;
 
@@ -219,11 +221,17 @@ class _RestMurthyBackend implements _MurthyBackend {
     final controller = _protocolControllers[uid];
     if (controller == null || controller.isClosed) return;
     try {
+      developer.log('Polling users/$uid/murthyProtocols', name: _logName);
       final response = await _client.get(
         Uri.parse(_protocolsUrl(uid)),
         headers: await _headers(),
       );
       if (response.statusCode != 200) {
+        developer.log(
+          'Poll failed: ${response.statusCode} ${response.body}',
+          name: _logName,
+          level: 900,
+        );
         controller.addError(
           StateError(
             'Firestore REST watchProtocols failed: ${response.statusCode} ${response.body}',
@@ -233,6 +241,7 @@ class _RestMurthyBackend implements _MurthyBackend {
       }
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       final docs = body['documents'] as List<dynamic>? ?? const [];
+      developer.log('Fetched ${docs.length} protocol doc(s)', name: _logName);
       controller.add(
         docs.map((doc) {
           final map = doc as Map<String, dynamic>;
@@ -241,6 +250,7 @@ class _RestMurthyBackend implements _MurthyBackend {
         }).toList(),
       );
     } catch (e, stackTrace) {
+      developer.log('Poll threw', name: _logName, level: 1000, error: e, stackTrace: stackTrace);
       controller.addError(e, stackTrace);
     }
   }
@@ -307,6 +317,7 @@ class _RestMurthyBackend implements _MurthyBackend {
     final controller = _progressControllers[key];
     if (controller == null || controller.isClosed) return;
     try {
+      developer.log('Polling users/$uid/murthyProgress/$dateKey', name: _logName);
       final response = await _client.get(
         Uri.parse(_progressDocUrl(uid, dateKey)),
         headers: await _headers(),
@@ -316,6 +327,11 @@ class _RestMurthyBackend implements _MurthyBackend {
         return;
       }
       if (response.statusCode != 200) {
+        developer.log(
+          'Poll failed: ${response.statusCode} ${response.body}',
+          name: _logName,
+          level: 900,
+        );
         controller.addError(
           StateError(
             'Firestore REST watchProgress failed: ${response.statusCode} ${response.body}',
@@ -326,6 +342,7 @@ class _RestMurthyBackend implements _MurthyBackend {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       controller.add(decodeFirestoreFields(body));
     } catch (e, stackTrace) {
+      developer.log('Poll threw', name: _logName, level: 1000, error: e, stackTrace: stackTrace);
       controller.addError(e, stackTrace);
     }
   }

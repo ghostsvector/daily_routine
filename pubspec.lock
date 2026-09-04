@@ -127,7 +127,7 @@ packages:
       path: "../daily_routine_sdk"
       relative: true
     source: path
-    version: "0.1.1"
+    version: "0.1.2"
   dbus:
     dependency: transitive
     description:

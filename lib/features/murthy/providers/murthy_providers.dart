@@ -17,13 +17,18 @@ final murthyRepositoryProvider = Provider<MurthyRepository>(
   (ref) => MurthyRepository(),
 );
 
-final dailyProtocolsProvider = StreamProvider<List<DailyProtocol>>((ref) {
+/// `autoDispose`: on Linux this polls Firestore's REST API on a timer (see
+/// `MurthyRepository`'s REST backend) — without autoDispose, a plain
+/// `StreamProvider` never tears down once first watched, so it would keep
+/// polling for as long as the app process runs, not just while the Murthy
+/// screen is open.
+final dailyProtocolsProvider = StreamProvider.autoDispose<List<DailyProtocol>>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user.isEmpty) return const Stream.empty();
   return ref.watch(murthyRepositoryProvider).watchProtocols(user.uid);
 });
 
-final todayProgressProvider = StreamProvider<DailyProgressEntry>((ref) {
+final todayProgressProvider = StreamProvider.autoDispose<DailyProgressEntry>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user.isEmpty) return const Stream.empty();
   return ref

@@ -16,7 +16,15 @@ final hasUsageTrackingPermissionProvider = FutureProvider<bool>((ref) {
 
 /// Recent app-usage / browser activity, synced across devices via
 /// Firestore — newest first.
-final recentActivityProvider = StreamProvider<List<ActivityEvent>>((ref) {
+///
+/// `autoDispose`: on Linux this polls Firestore's REST API on a timer (see
+/// `RestActivityRepositoryService`) — without autoDispose, a plain
+/// `StreamProvider` never tears down once first watched, so the poll loop
+/// would keep hitting Firestore for as long as the app process runs, even
+/// after navigating away from this screen. Letting it dispose when nothing
+/// is watching it means reads only happen while this screen is actually
+/// open.
+final recentActivityProvider = StreamProvider.autoDispose<List<ActivityEvent>>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user.isEmpty) return const Stream.empty();
   return ref.watch(activityRepositoryProvider).watchRecentActivity(user.uid);
