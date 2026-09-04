@@ -3,6 +3,7 @@
 [![CI](https://github.com/kasinadhsarma/daily_routine/actions/workflows/ci.yml/badge.svg)](https://github.com/kasinadhsarma/daily_routine/actions/workflows/ci.yml)
 [![Release](https://github.com/kasinadhsarma/daily_routine/actions/workflows/release.yml/badge.svg)](https://github.com/kasinadhsarma/daily_routine/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/kasinadhsarma/daily_routine/total.svg)](https://github.com/kasinadhsarma/daily_routine/releases)
 
 A Flutter app for scheduling a daily routine, running focused work sessions
 with distracting apps blocked, and tracking your own activity (app usage,
