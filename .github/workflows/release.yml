@@ -103,6 +103,35 @@ jobs:
             "release-artifacts/daily-routine-${VERSION}.apk"
           cp dist/*.deb "release-artifacts/daily-routine-${VERSION}_amd64.deb"
 
+      # Proves a downloaded file is exactly what this workflow built —
+      # checksums catch corruption/mismatches, the GPG signature also
+      # proves it was actually built and released by this repo's own CI,
+      # not tampered with or re-uploaded by someone else. See
+      # release-signing-key.asc (repo root) for the public key to verify
+      # against, and the README's "Verifying a release" section.
+      - name: Generate checksums
+        working-directory: release-artifacts
+        run: sha256sum * > SHA256SUMS
+
+      - name: Import GPG release signing key
+        run: |
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpgconf --kill gpg-agent
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          echo "${{ secrets.GPG_PASSPHRASE }}" > /tmp/gpg-passphrase.txt
+
+      - name: Sign artifacts and checksums
+        working-directory: release-artifacts
+        run: |
+          for f in daily-routine-*.apk daily-routine-*.deb SHA256SUMS; do
+            gpg --batch --yes --pinentry-mode loopback \
+              --passphrase-file /tmp/gpg-passphrase.txt \
+              --detach-sign --armor "$f"
+          done
+          shred -u /tmp/gpg-passphrase.txt
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

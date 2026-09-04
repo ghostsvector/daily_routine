@@ -88,6 +88,28 @@ To cut a release: bump `version:` in `pubspec.yaml`, merge to `main`, then
 git tag v1.1.0 && git push origin v1.1.0
 ```
 
+### Verifying a release
+
+Every release's APK, `.deb`, and `SHA256SUMS` file are GPG-signed by CI
+with a dedicated release-signing key (never used for anything else, kept
+only as a GitHub Actions secret). To verify a downloaded file actually
+came from this repo's own release pipeline and hasn't been altered:
+
+```bash
+# one-time: import the public key
+curl -fsSL https://raw.githubusercontent.com/kasinadhsarma/daily_routine/main/release-signing-key.asc | gpg --import
+
+# per download: verify the signature
+gpg --verify daily-routine-X.Y.Z_amd64.deb.asc daily-routine-X.Y.Z_amd64.deb
+```
+
+A "Good signature" from `Daily Routine Release Signing` confirms it. The
+"WARNING: This key is not certified with a trusted signature" line under
+that is normal and expected — it just means *you* haven't personally
+marked the key as trusted in your own keyring, not that anything is
+wrong with the signature itself. Key fingerprint:
+`9BB5 C7AD 330C 9919 EFF1  AA6B 98FE 02C5 B7CD E4CB`.
+
 ## Security
 
 See [SECURITY.md](SECURITY.md) for how to report a vulnerability.
