@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../core/providers.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../routines/data/gate_daily_schedule.dart';
+
+final _packageInfoProvider = FutureProvider<PackageInfo>(
+  (ref) => PackageInfo.fromPlatform(),
+);
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -35,6 +40,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+    final packageInfo = ref.watch(_packageInfoProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -87,6 +93,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               'Daily progress, summary & protocols — encrypted on this device.',
             ),
             onTap: () => context.push('/murthy'),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('About'),
+            subtitle: Text(
+              packageInfo.when(
+                data: (info) => 'Version ${info.version} (build ${info.buildNumber})',
+                loading: () => 'Loading version…',
+                error: (_, _) => 'Version unavailable',
+              ),
+            ),
           ),
           const Divider(),
           ListTile(
