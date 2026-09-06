@@ -1,6 +1,5 @@
-import 'dart:developer' as developer;
-
 import 'package:daily_routine_sdk/daily_routine_sdk.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 const _logName = 'ActivityRolloverService';
 
@@ -29,19 +28,28 @@ String _sliceKey(ActivityEvent e) => e.domain ?? e.packageName ?? e.title;
 /// of the (REST-backed, Linux) activity feed cost more the larger the
 /// collection got. Capping the collection's size caps that cost
 /// permanently, independent of any poll-interval/limit tuning.
+///
+/// Every step here prints via [debugPrint] rather than `dart:developer`'s
+/// `log()` — the latter is silently dropped in a release build with no
+/// debugger attached (i.e. exactly the installed .deb/.apk a real user
+/// runs), so it would never actually reach anyone trying to watch this run
+/// from a terminal.
 Future<void> runActivityRollover(ActivityRepositoryService repo, String uid) async {
   final today = _dateKey(DateTime.now());
 
   final lastRolloverResult = await repo.getLastRolloverDate(uid);
-  final lastRollover = lastRolloverResult.fold((v) => v, (e) => null);
+  final lastRollover = lastRolloverResult.fold((v) => v, (e) {
+    debugPrint('[$_logName] getLastRolloverDate failed: $e');
+    return null;
+  });
   if (lastRollover == today) {
-    developer.log('Already rolled over today ($today) — skipping', name: _logName);
+    debugPrint('[$_logName] Already rolled over today ($today) — skipping');
     return;
   }
 
   final eventsResult = await repo.fetchAllEvents(uid);
   final events = eventsResult.fold((v) => v, (e) {
-    developer.log('fetchAllEvents failed, skipping this run', name: _logName, error: e);
+    debugPrint('[$_logName] fetchAllEvents failed, skipping this run: $e');
     return null;
   });
   if (events == null) return;
@@ -55,9 +63,8 @@ Future<void> runActivityRollover(ActivityRepositoryService repo, String uid) asy
     (byDay[day] ??= []).add(event);
   }
 
-  developer.log(
-    'Rolling over ${byDay.length} past day(s), ${events.length} raw event(s) total',
-    name: _logName,
+  debugPrint(
+    '[$_logName] Rolling over ${byDay.length} past day(s), ${events.length} raw event(s) total',
   );
 
   for (final entry in byDay.entries) {
@@ -93,12 +100,18 @@ Future<void> runActivityRollover(ActivityRepositoryService repo, String uid) asy
 
     final saveResult = await repo.saveDailySummary(uid, summary);
     if (saveResult.isFailure) {
-      developer.log('Failed to save summary for $date — leaving its raw events in place', name: _logName);
+      saveResult.fold((_) {}, (error) {
+        debugPrint(
+          '[$_logName] Failed to save summary for $date — leaving its raw events in '
+          'place. Cause: $error (if this says permission-denied, the Firestore rules '
+          "for activitySummaries/meta haven't been deployed yet — see README)",
+        );
+      });
       continue;
     }
 
     await repo.deleteEvents(uid, dayEvents.map((e) => e.id).toList());
-    developer.log('Rolled over $date: ${dayEvents.length} event(s) summarized and deleted', name: _logName);
+    debugPrint('[$_logName] Rolled over $date: ${dayEvents.length} event(s) summarized and deleted');
   }
 
   await repo.setLastRolloverDate(uid, today);
