@@ -13,7 +13,11 @@ import '../data/activity_rollover_service.dart';
 final activityRolloverProvider = FutureProvider<void>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user.isEmpty) return;
-  await runActivityRollover(ref.watch(activityRepositoryProvider), user.uid);
+  await runActivityRollover(
+    ref.watch(activityRepositoryProvider),
+    ref.watch(routineRepositoryProvider),
+    user.uid,
+  );
 });
 
 final activityTrackingSupportedProvider = FutureProvider<bool>((ref) {
