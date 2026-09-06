@@ -1,8 +1,11 @@
 name: Release
 
 # Cut a release: bump `version:` in pubspec.yaml (e.g. 1.1.0+2), merge to
-# main, then push a matching tag (the part before "+"):
-#   git tag v1.1.0 && git push origin v1.1.0
+# main, then push a matching signed, annotated tag (the part before "+") —
+# `-s` requires git configured with a signing key (see local dev setup in
+# README); a plain lightweight `git tag` is never GPG-signed even with
+# tag.gpgsign=true, so it won't show as Verified on GitHub:
+#   git tag -s -m v1.1.0 v1.1.0 && git push origin v1.1.0
 #
 # Builds an Android release APK and a Linux .deb, and attaches both to a
 # GitHub Release for that tag.
@@ -156,6 +159,12 @@ jobs:
             --notes-file /tmp/release-notes.md \
             release-artifacts/*
 
+      # Signs this bot commit with kasinadhsarma's commit-signing GPG key
+      # (separate from the release-artifact-signing key above) so it shows
+      # as Verified on GitHub, same as manually-pushed commits/tags.
+      - name: Import commit-signing GPG key
+        run: echo "${{ secrets.COMMIT_SIGNING_KEY }}" | gpg --batch --import
+
       # Prepends the same commit-history notes to a CHANGELOG.md committed
       # to the repo, so "what changed" is written once, automatically,
       # right here — not by hand in a commit message after the fact.
@@ -163,8 +172,10 @@ jobs:
         run: |
           DATE="$(date -u +%Y-%m-%d)"
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "kasinadhsarma"
+          git config user.email "218753575+kasinadhsarma@users.noreply.github.com"
+          git config user.signingkey "8C815D81CC7B86943F1183630A6E188D9E3E301C"
+          git config commit.gpgsign true
           git fetch origin main
           git checkout -B main origin/main
 
