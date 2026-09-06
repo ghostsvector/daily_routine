@@ -174,7 +174,7 @@ jobs:
 
           git config user.name "kasinadhsarma"
           git config user.email "218753575+kasinadhsarma@users.noreply.github.com"
-          git config user.signingkey "8C815D81CC7B86943F1183630A6E188D9E3E301C"
+          git config user.signingkey "EFCAFE4A6CE496E560DB3BE8C467E1EB7AFCC640"
           git config commit.gpgsign true
           git fetch origin main
           git checkout -B main origin/main
