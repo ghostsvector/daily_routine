@@ -132,26 +132,35 @@ jobs:
           done
           shred -u /tmp/gpg-passphrase.txt
 
+      # This repo pushes straight to main instead of merging PRs, so `gh
+      # release create --generate-notes` (which summarizes merged PRs) has
+      # nothing to list and produces an almost-empty body — just a compare
+      # link. Real "what changed" content only exists in commit messages,
+      # so build the notes from `git log` between the previous tag and this
+      # one instead.
+      - name: Build release notes from commit history
+        run: |
+          PREV_TAG="$(git tag --sort=v:refname | grep -B1 -x "$GITHUB_REF_NAME" | head -1)"
+          if [ "$PREV_TAG" = "$GITHUB_REF_NAME" ]; then
+            git log --reverse --pretty=format:'- %s' "$GITHUB_REF_NAME" > /tmp/release-notes.md
+          else
+            git log --reverse --pretty=format:'- %s' "$PREV_TAG".."$GITHUB_REF_NAME" > /tmp/release-notes.md
+          fi
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
             --title "$GITHUB_REF_NAME" \
-            --generate-notes \
+            --notes-file /tmp/release-notes.md \
             release-artifacts/*
 
-      # Copies GitHub's auto-generated release notes (commits since the
-      # last tag) into a CHANGELOG.md committed to the repo, so "what
-      # changed" is written once, automatically, right here — not by hand
-      # in a commit message or PR description after the fact. Runs after
-      # the release exists so `gh release view` can read back what
-      # --generate-notes actually produced, rather than recomputing it.
+      # Prepends the same commit-history notes to a CHANGELOG.md committed
+      # to the repo, so "what changed" is written once, automatically,
+      # right here — not by hand in a commit message after the fact.
       - name: Update CHANGELOG.md
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          NOTES="$(gh release view "$GITHUB_REF_NAME" --json body -q .body)"
           DATE="$(date -u +%Y-%m-%d)"
 
           git config user.name "github-actions[bot]"
@@ -162,7 +171,8 @@ jobs:
           {
             echo "## $GITHUB_REF_NAME — $DATE"
             echo ""
-            echo "$NOTES"
+            cat /tmp/release-notes.md
+            echo ""
             echo ""
             if [ -f CHANGELOG.md ]; then cat CHANGELOG.md; fi
           } > /tmp/CHANGELOG.new
