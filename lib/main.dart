@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:daily_routine_sdk/daily_routine_sdk.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show FlutterErrorDetails, TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,60 +13,87 @@ import 'core/providers.dart';
 import 'flavors/flavor_selector.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  // `.env.local` (untracked, personal) overrides `.env` (shared defaults),
-  // matching the convention most JS tooling uses. Both are optional.
-  await dotenv.load(
-    fileName: '.env',
-    overrideWithFiles: ['.env.local'],
-    isOptional: true,
-  );
+  // Catches anything FlutterError.onError doesn't (async errors outside a
+  // Flutter callback — a bare `Future` that errors with nothing awaiting
+  // it, a Timer callback that throws, etc.) — the standard Crashlytics
+  // setup pattern, since FlutterError.onError alone only covers errors the
+  // framework itself catches while building/laying out/painting widgets.
+  final crashReporting = FirebaseCrashReportingService();
 
-  // firebase_core has no Linux desktop implementation — Firebase.initializeApp()
-  // itself would throw there (no platform channel to answer it), so every
-  // Firebase-backed SDK service dispatches internally to a REST-based
-  // implementation on Linux instead of the native plugin (see
-  // daily_routine_sdk's FirebaseAuthService/FirestoreRoutineRepositoryService/
-  // FirestoreBlockedAppsRepositoryService). That REST path needs the raw
-  // project id/API key up front, via RestFirebaseConfig — set once, here,
-  // instead of Firebase.initializeApp(), before any Firebase-backed SDK
-  // class gets constructed below.
-  final isLinuxDesktop = !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
+  await runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-  Object? firebaseInitError;
-  try {
-    final options = getFirebaseOptions();
-    if (isLinuxDesktop) {
-      RestFirebaseConfig.configure(projectId: options.projectId, apiKey: options.apiKey);
-    } else {
-      await Firebase.initializeApp(options: options);
-    }
-  } catch (e) {
-    firebaseInitError = e;
-  }
+      final previousOnError = FlutterError.onError;
+      FlutterError.onError = (FlutterErrorDetails details) {
+        previousOnError?.call(details);
+        crashReporting.recordError(details.exception, details.stack, fatal: true);
+      };
 
-  final notificationService = LocalNotificationService(
-    config: const LocalNotificationChannelConfig(
-      channelId: 'routine_reminders',
-      channelName: 'Routine reminders',
-      channelDescription: 'Reminders for your scheduled routine tasks.',
-    ),
-  );
-  if (firebaseInitError == null) {
-    await notificationService.initialize();
-    // Prompts for POST_NOTIFICATIONS and, on Android 12+, the exact-alarm
-    // permission — without this the 04:00 GATE alarm and other reminders
-    // silently fall back to inexact (up to ~15 min late) delivery.
-    await notificationService.requestPermission();
-  }
+      // `.env.local` (untracked, personal) overrides `.env` (shared defaults),
+      // matching the convention most JS tooling uses. Both are optional.
+      await dotenv.load(
+        fileName: '.env',
+        overrideWithFiles: ['.env.local'],
+        isOptional: true,
+      );
 
-  runApp(
-    ProviderScope(
-      overrides: [notificationServiceProvider.overrideWithValue(notificationService)],
-      child: firebaseInitError == null
-          ? const DailyRoutineApp()
-          : _FirebaseNotConfiguredApp(error: firebaseInitError),
-    ),
+      // firebase_core has no Linux desktop implementation — Firebase.initializeApp()
+      // itself would throw there (no platform channel to answer it), so every
+      // Firebase-backed SDK service dispatches internally to a REST-based
+      // implementation on Linux instead of the native plugin (see
+      // daily_routine_sdk's FirebaseAuthService/FirestoreRoutineRepositoryService/
+      // FirestoreBlockedAppsRepositoryService). That REST path needs the raw
+      // project id/API key up front, via RestFirebaseConfig — set once, here,
+      // instead of Firebase.initializeApp(), before any Firebase-backed SDK
+      // class gets constructed below. Crashlytics itself has no REST fallback
+      // (nothing to poll/PATCH for a crash reporter) — it's simply unavailable
+      // on Linux, and FirebaseCrashReportingService degrades to logging via
+      // debugPrint there instead of silently dropping reports.
+      final isLinuxDesktop = !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
+
+      Object? firebaseInitError;
+      try {
+        final options = getFirebaseOptions();
+        if (isLinuxDesktop) {
+          RestFirebaseConfig.configure(projectId: options.projectId, apiKey: options.apiKey);
+        } else {
+          await Firebase.initializeApp(options: options);
+        }
+      } catch (e) {
+        firebaseInitError = e;
+      }
+
+      final notificationService = LocalNotificationService(
+        config: const LocalNotificationChannelConfig(
+          channelId: 'routine_reminders',
+          channelName: 'Routine reminders',
+          channelDescription: 'Reminders for your scheduled routine tasks.',
+        ),
+      );
+      if (firebaseInitError == null) {
+        await notificationService.initialize();
+        // Prompts for POST_NOTIFICATIONS and, on Android 12+, the exact-alarm
+        // permission — without this the 04:00 GATE alarm and other reminders
+        // silently fall back to inexact (up to ~15 min late) delivery.
+        await notificationService.requestPermission();
+      }
+
+      runApp(
+        ProviderScope(
+          overrides: [
+            notificationServiceProvider.overrideWithValue(notificationService),
+            crashReportingServiceProvider.overrideWithValue(crashReporting),
+          ],
+          child: firebaseInitError == null
+              ? const DailyRoutineApp()
+              : _FirebaseNotConfiguredApp(error: firebaseInitError),
+        ),
+      );
+    },
+    (error, stackTrace) {
+      crashReporting.recordError(error, stackTrace, fatal: true);
+    },
   );
 }
 

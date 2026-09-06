@@ -34,3 +34,14 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
     'initialized NotificationService.',
   );
 });
+
+/// Overridden in `main()` with the same instance already wired up to
+/// FlutterError.onError/runZonedGuarded, so app code that wants to record a
+/// handled (non-fatal) error uses the identical reporter global crashes go
+/// through.
+final crashReportingServiceProvider = Provider<CrashReportingService>((ref) {
+  throw UnimplementedError(
+    'crashReportingServiceProvider must be overridden in main() with an '
+    'initialized CrashReportingService.',
+  );
+});
