@@ -12,7 +12,20 @@
           "package_name": "com.kasinadhsarma.dailyroutine"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "540841214580-gft7eubj4lcm1q9b5iu1ni5pr50ial8i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kasinadhsarma.dailyroutine",
+            "certificate_hash": "416e8e93dcdbdccefb1055201ea055683da1927b"
+          }
+        },
+        {
+          "client_id": "540841214580-l2u5m7opkebcp33vq03a8uoke3f8pb7r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBnKSy_xb3qpO-wmLb8nhSfB9nvHf1AKbQ"
@@ -20,7 +33,55 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "540841214580-l2u5m7opkebcp33vq03a8uoke3f8pb7r.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "540841214580-9qb7m3lgqmiukrqt6qc096crpu127rbr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.dailyRoutine"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:540841214580:android:ce6cdad052ae7bbdef4721",
+        "android_client_info": {
+          "package_name": "com.kasinadhsarma.dailyroutine.internal"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "540841214580-l2u5m7opkebcp33vq03a8uoke3f8pb7r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnKSy_xb3qpO-wmLb8nhSfB9nvHf1AKbQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "540841214580-l2u5m7opkebcp33vq03a8uoke3f8pb7r.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "540841214580-9qb7m3lgqmiukrqt6qc096crpu127rbr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.dailyRoutine"
+              }
+            }
+          ]
         }
       }
     }

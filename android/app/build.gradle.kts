@@ -39,6 +39,27 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // Mirrors the Dart-side FLAVOR dart-define (see lib/flavors/flavor_selector.dart)
+    // as real Gradle product flavors, so internal and external are genuinely
+    // separate installable apps — not just a different title/banner in the
+    // same APK. "external" keeps the app's original applicationId so the
+    // existing installed app and its Firebase Android app registration are
+    // untouched; "internal" gets its own applicationId + its own Firebase
+    // Android app registration in google-services.json (added via
+    // `firebase apps:create ANDROID`), since the google-services Gradle
+    // plugin hard-fails the build if a flavor's applicationId has no
+    // matching client entry there.
+    flavorDimensions += "environment"
+    productFlavors {
+        create("external") {
+            dimension = "environment"
+        }
+        create("internal") {
+            dimension = "environment"
+            applicationId = "com.kasinadhsarma.dailyroutine.internal"
+        }
+    }
 }
 
 kotlin {
