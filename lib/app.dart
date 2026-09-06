@@ -21,6 +21,11 @@ class DailyRoutineApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: getAppTitle(),
+      // Flutter's own debug banner tracks build mode (debug vs. release),
+      // not flavor — it's off here so a release-mode internal build still
+      // needs its own way to say "this isn't the build real users have".
+      // The banner below is that: tied to FLAVOR, shown regardless of
+      // build mode, so an internal build is never mistaken for external.
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorSchemeSeed: const Color(0xFF3D5AFE),
@@ -34,6 +39,15 @@ class DailyRoutineApp extends ConsumerWidget {
       ),
       themeMode: ThemeMode.system,
       routerConfig: router,
+      builder: (context, child) {
+        if (flavor != 'internal' || child == null) return child ?? const SizedBox.shrink();
+        return Banner(
+          message: 'INTERNAL',
+          location: BannerLocation.topEnd,
+          color: Colors.red.shade700,
+          child: child,
+        );
+      },
     );
   }
 }
