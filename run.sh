@@ -35,11 +35,14 @@ case "$device_choice" in
 esac
 
 echo "Launching lib/main.dart with FLAVOR=$flavor..."
-# FLAVOR picks which lib/flavors/<flavor>/firebase_options.dart is used
-# (see lib/flavors/flavor_selector.dart). There's no Android Gradle product
-# flavor defined for this app, so --flavor is intentionally not passed.
+# --dart-define=FLAVOR picks which lib/flavors/<flavor>/firebase_options.dart
+# is used (see lib/flavors/flavor_selector.dart) and shows the INTERNAL
+# banner (app.dart). --flavor selects the matching Android Gradle product
+# flavor (android/app/build.gradle.kts), which gives internal its own
+# applicationId — a real, separately-installable app, not just a different
+# banner in the same APK. Both must be passed and must agree.
 #
 # Firebase credentials themselves come from .env/.env.local (loaded at
 # runtime via flutter_dotenv, bundled as assets — see pubspec.yaml), not
 # from a --dart-define-from-file secrets file.
-exec flutter run --dart-define=FLAVOR="$flavor" "${device_args[@]}" "$@"
+exec flutter run --flavor "$flavor" --dart-define=FLAVOR="$flavor" "${device_args[@]}" "$@"

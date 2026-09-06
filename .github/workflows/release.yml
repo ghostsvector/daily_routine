@@ -88,7 +88,7 @@ jobs:
       - run: flutter analyze
 
       - name: Build Android release APK
-        run: flutter build apk --release --dart-define=FLAVOR=external
+        run: flutter build apk --release --flavor external --dart-define=FLAVOR=external
 
       - name: Install Linux desktop build dependencies
         run: |
@@ -102,7 +102,7 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           mkdir -p release-artifacts
-          cp build/app/outputs/flutter-apk/app-release.apk \
+          cp build/app/outputs/flutter-apk/app-external-release.apk \
             "release-artifacts/daily-routine-${VERSION}.apk"
           cp dist/*.deb "release-artifacts/daily-routine-${VERSION}_amd64.deb"
 
