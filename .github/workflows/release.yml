@@ -140,3 +140,34 @@ jobs:
             --title "$GITHUB_REF_NAME" \
             --generate-notes \
             release-artifacts/*
+
+      # Copies GitHub's auto-generated release notes (commits since the
+      # last tag) into a CHANGELOG.md committed to the repo, so "what
+      # changed" is written once, automatically, right here — not by hand
+      # in a commit message or PR description after the fact. Runs after
+      # the release exists so `gh release view` can read back what
+      # --generate-notes actually produced, rather than recomputing it.
+      - name: Update CHANGELOG.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="$(gh release view "$GITHUB_REF_NAME" --json body -q .body)"
+          DATE="$(date -u +%Y-%m-%d)"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout -B main origin/main
+
+          {
+            echo "## $GITHUB_REF_NAME — $DATE"
+            echo ""
+            echo "$NOTES"
+            echo ""
+            if [ -f CHANGELOG.md ]; then cat CHANGELOG.md; fi
+          } > /tmp/CHANGELOG.new
+          mv /tmp/CHANGELOG.new CHANGELOG.md
+
+          git add CHANGELOG.md
+          git commit -m "Update CHANGELOG.md for $GITHUB_REF_NAME [skip ci]"
+          git push origin main
