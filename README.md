@@ -47,6 +47,10 @@ plan it.
   [`daily_routine_sdk`](https://github.com/kasinadhsarma/daily_routine_sdk)
   repo, pulled in as a git dependency.
 
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for why each layer of the
+whole ecosystem (this app, the SDK, the MCP server, the Chrome extension)
+is built the way it is, what tradeoffs were made, and what's next.
+
 ## Getting started
 
 Requires the Flutter SDK (stable channel) and a Firebase project with
