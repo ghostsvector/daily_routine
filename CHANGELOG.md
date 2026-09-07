@@ -1,3 +1,19 @@
+## v1.2.0 — 2026-09-07
+
+- Auto-generate CHANGELOG.md on every release
+- Backfill CHANGELOG.md from commit history, fix release notes automation
+- Sign CI's automated CHANGELOG commits with a dedicated commit-signing key
+- test: verify commit signature with matching email
+- test: verify commit signature with corrected email/key
+- test: verify commit signature with noreply email
+- Fix commit-signing key ID in release workflow to match the corrected key
+- Add architecture documentation covering the whole ecosystem
+- Remove analysis_options.yaml, update pubspec.lock
+- Show an INTERNAL banner for the internal flavor, independent of build mode
+- Split internal/external into genuinely separate installable Android apps
+- Add TOTP-based two-factor authentication
+- Bump version to 1.2.0 for release (TOTP two-factor authentication)
+
 # Changelog
 
 Generated from git commit history between tags (`.github/workflows/release.yml`
