@@ -1,3 +1,8 @@
+## v1.2.6 — 2026-09-07
+
+- Update CHANGELOG.md for v1.2.5 [skip ci]
+- Add missing network.client entitlement for macOS App Sandbox
+
 ## v1.2.5 — 2026-09-07
 
 - Update CHANGELOG.md for v1.2.4 [skip ci]
