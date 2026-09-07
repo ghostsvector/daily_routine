@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../providers/auth_providers.dart';
 import '../providers/two_factor_providers.dart';
 
 /// Shown once per app session, after Firebase Auth succeeds, when 2FA is
@@ -30,7 +31,8 @@ class _TwoFactorChallengeScreenState extends ConsumerState<TwoFactorChallengeScr
       _busy = true;
       _error = null;
     });
-    final ok = await ref.read(twoFactorServiceProvider).verify(_codeController.text);
+    final uid = ref.read(currentUserProvider).uid;
+    final ok = await ref.read(twoFactorServiceProvider).verify(uid, _codeController.text);
     if (!mounted) return;
     setState(() => _busy = false);
     if (!ok) {
