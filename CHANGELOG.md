@@ -1,3 +1,7 @@
+## v1.2.4 — 2026-09-07
+
+- Sync 2FA across devices via an encrypted Firestore record
+
 ## v1.2.2 — 2026-09-07
 
 - Update CHANGELOG.md for v1.2.1 [skip ci]
