@@ -26,6 +26,20 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Google Sign-In's OAuth flow redirects back into the app via this
+	     URL scheme after the browser step — without it, signInWithGoogle()
+	     would complete in the browser but never return control to the app
+	     on iOS. Value is this Firebase iOS app's REVERSED_CLIENT_ID
+	     (`firebase apps:sdkconfig IOS <appId>`), independent of bundle ID. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.540841214580-9qb7m3lgqmiukrqt6qc096crpu127rbr</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
