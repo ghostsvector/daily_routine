@@ -1,77 +1,59 @@
 #!/bin/bash
-# Build the Flutter Linux app from scratch and install it as a .deb package.
+# Downloads the latest (or a specified) Daily Routine release .deb straight
+# from GitHub Releases, verifies its checksum and GPG signature, and
+# installs it. This is the "just get the app running" path — no local
+# build, no cloning the SDK, no Flutter toolchain needed. To build from
+# this checkout's source instead, use build_deb.sh.
+#
+# Usage:
+#   ./install_deb.sh          # latest release
+#   ./install_deb.sh v1.2.7   # a specific tag
 set -euo pipefail
 
-APP_NAME="daily-routine"
-BIN_NAME="daily_routine"
-APP_DISPLAY_NAME="Daily Routine"
+REPO="kasinadhsarma/daily_routine"
 ARCH="amd64"
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VERSION="$(grep -m1 '^version:' "$PROJECT_DIR/pubspec.yaml" | awk '{print $2}' | cut -d'+' -f1)"
-
-BUNDLE_DIR="$PROJECT_DIR/build/linux/x64/release/bundle"
-DIST_DIR="$PROJECT_DIR/dist"
-PKG_ROOT="$(mktemp -d)"
-trap 'rm -rf "$PKG_ROOT"' EXIT
+VERSION="${1:-}"
 
 echo "==> Checking dependencies"
-command -v flutter >/dev/null || { echo "Error: flutter not found in PATH" >&2; exit 1; }
-command -v dpkg-deb >/dev/null || { echo "Error: dpkg-deb not found (sudo apt install dpkg-dev)" >&2; exit 1; }
+command -v curl >/dev/null || { echo "Error: curl not found" >&2; exit 1; }
+command -v gpg >/dev/null || { echo "Error: gpg not found (sudo apt install gnupg)" >&2; exit 1; }
+command -v dpkg >/dev/null || { echo "Error: dpkg not found" >&2; exit 1; }
+command -v sha256sum >/dev/null || { echo "Error: sha256sum not found" >&2; exit 1; }
 
-echo "==> Fetching packages"
-flutter pub get
-
-echo "==> Building Linux release bundle"
-flutter build linux --release
-
-if [[ ! -f "$BUNDLE_DIR/$BIN_NAME" ]]; then
-    echo "Error: build did not produce $BUNDLE_DIR/$BIN_NAME" >&2
-    exit 1
+if [[ -z "$VERSION" ]]; then
+    echo "==> Looking up the latest release"
+    VERSION="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
+        | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')"
+    if [[ -z "$VERSION" ]]; then
+        echo "Error: couldn't determine the latest release tag" >&2
+        exit 1
+    fi
 fi
+VERSION_NUM="${VERSION#v}"
+BASE_URL="https://github.com/$REPO/releases/download/$VERSION"
+DEB_FILE="daily-routine-${VERSION_NUM}_${ARCH}.deb"
 
-echo "==> Assembling package tree"
-INSTALL_LIB_DIR="$PKG_ROOT/opt/$APP_NAME"
-mkdir -p "$INSTALL_LIB_DIR"
-cp -r "$BUNDLE_DIR"/. "$INSTALL_LIB_DIR/"
+WORK_DIR="$(mktemp -d)"
+trap 'rm -rf "$WORK_DIR"' EXIT
+cd "$WORK_DIR"
 
-mkdir -p "$PKG_ROOT/usr/bin"
-ln -sf "/opt/$APP_NAME/$BIN_NAME" "$PKG_ROOT/usr/bin/$APP_NAME"
+echo "==> Downloading $VERSION"
+curl -fsSL -O "$BASE_URL/$DEB_FILE"
+curl -fsSL -O "$BASE_URL/$DEB_FILE.asc"
+curl -fsSL -O "$BASE_URL/SHA256SUMS"
+curl -fsSL -O "$BASE_URL/SHA256SUMS.asc"
 
-mkdir -p "$PKG_ROOT/usr/share/applications"
-cat > "$PKG_ROOT/usr/share/applications/$APP_NAME.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=$APP_DISPLAY_NAME
-Exec=/opt/$APP_NAME/$BIN_NAME
-Icon=$APP_NAME
-Terminal=false
-Categories=Utility;
-EOF
+echo "==> Verifying checksum"
+sha256sum --ignore-missing -c SHA256SUMS
 
-mkdir -p "$PKG_ROOT/usr/share/icons/hicolor/512x512/apps"
-ICON_SRC="$PROJECT_DIR/web/icons/Icon-512.png"
-if [[ -f "$ICON_SRC" ]]; then
-    cp "$ICON_SRC" "$PKG_ROOT/usr/share/icons/hicolor/512x512/apps/$APP_NAME.png"
-fi
-
-mkdir -p "$PKG_ROOT/DEBIAN"
-INSTALLED_SIZE="$(du -sk "$PKG_ROOT" | cut -f1)"
-cat > "$PKG_ROOT/DEBIAN/control" <<EOF
-Package: $APP_NAME
-Version: $VERSION
-Section: utils
-Priority: optional
-Architecture: $ARCH
-Installed-Size: $INSTALLED_SIZE
-Maintainer: Kasinadh Sarma <kasinadhsarma@gmail.com>
-Description: $APP_DISPLAY_NAME
- A Flutter-based daily routine and task management app.
-EOF
-
-echo "==> Building .deb package"
-mkdir -p "$DIST_DIR"
-DEB_FILE="$DIST_DIR/${APP_NAME}_${VERSION}_${ARCH}.deb"
-dpkg-deb --build --root-owner-group "$PKG_ROOT" "$DEB_FILE"
+echo "==> Verifying GPG signature"
+# Fetched fresh from the repo rather than assumed to be alongside this
+# script, so this still works if the script is copied/run standalone.
+curl -fsSL -o release-signing-key.asc \
+    "https://raw.githubusercontent.com/$REPO/main/release-signing-key.asc"
+gpg --import release-signing-key.asc 2>/dev/null
+gpg --verify SHA256SUMS.asc SHA256SUMS
+gpg --verify "$DEB_FILE.asc" "$DEB_FILE"
 
 echo "==> Installing $DEB_FILE"
 if [[ $EUID -eq 0 ]]; then
@@ -85,4 +67,4 @@ if ! $SUDO dpkg -i "$DEB_FILE"; then
     $SUDO apt-get install -f -y
 fi
 
-echo "==> Installed successfully. Launch with: $APP_NAME"
+echo "==> Installed $VERSION successfully. Launch with: daily-routine"

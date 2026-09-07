@@ -71,11 +71,22 @@ Deploy Firestore security rules with:
 firebase deploy --only firestore:rules
 ```
 
+## Installing (Linux)
+
+```bash
+./install_deb.sh                     # downloads + verifies + installs the latest release
+./install_deb.sh v1.2.7               # or a specific version
+```
+
+Verifies the downloaded `.deb`'s checksum and GPG signature (against
+`release-signing-key.asc`) before installing — see "Verifying a release"
+below for what that's actually checking.
+
 ## Building & packaging
 
 ```bash
 flutter build apk --release          # Android
-./install_deb.sh                     # Linux, packages build/linux into dist/*.deb
+./build_deb.sh                       # Linux, builds from this checkout's source and installs
 ```
 
 ## CI/CD & releases
