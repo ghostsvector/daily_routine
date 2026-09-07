@@ -1,3 +1,8 @@
+## v1.2.2 — 2026-09-07
+
+- Update CHANGELOG.md for v1.2.1 [skip ci]
+- Activate Firebase App Check on every platform
+
 ## v1.2.1 — 2026-09-07
 
 - Update CHANGELOG.md for v1.2.0 [skip ci]
