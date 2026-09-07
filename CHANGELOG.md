@@ -1,3 +1,8 @@
+## v1.2.1 — 2026-09-07
+
+- Update CHANGELOG.md for v1.2.0 [skip ci]
+- Add QR code to the 2FA setup screen
+
 ## v1.2.0 — 2026-09-07
 
 - Auto-generate CHANGELOG.md on every release
