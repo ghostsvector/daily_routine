@@ -1,14 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/two_factor_service.dart';
+import 'auth_providers.dart';
 
 final twoFactorServiceProvider = Provider<TwoFactorService>((ref) => TwoFactorService());
 
-/// Whether 2FA is enrolled at all — persisted (OS keystore), survives app
-/// restarts. Re-read on demand rather than streamed, since it only changes
-/// from the setup screen itself (which invalidates this after enroll/disable).
+/// Whether 2FA is enrolled for the *currently signed-in* account —
+/// persisted per-uid (OS keystore), survives app restarts. Re-read on
+/// demand rather than streamed, since it only changes from the setup
+/// screen itself (which invalidates this after enroll/disable).
 final twoFactorEnabledProvider = FutureProvider<bool>((ref) {
-  return ref.watch(twoFactorServiceProvider).isEnabled();
+  final uid = ref.watch(currentUserProvider).uid;
+  return ref.watch(twoFactorServiceProvider).isEnabled(uid);
 });
 
 /// Whether the *current app session* has passed the TOTP challenge —

@@ -33,7 +33,7 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
     final user = ref.read(currentUserProvider);
     final uri = await ref
         .read(twoFactorServiceProvider)
-        .beginEnrollment(accountEmail: user.email ?? user.uid);
+        .beginEnrollment(uid: user.uid, accountEmail: user.email ?? user.uid);
     if (!mounted) return;
     setState(() {
       _provisioningUri = uri;
@@ -46,7 +46,10 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
       _busy = true;
       _error = null;
     });
-    final ok = await ref.read(twoFactorServiceProvider).confirmEnrollment(_codeController.text);
+    final uid = ref.read(currentUserProvider).uid;
+    final ok = await ref
+        .read(twoFactorServiceProvider)
+        .confirmEnrollment(uid, _codeController.text);
     if (!mounted) return;
     setState(() => _busy = false);
     if (!ok) {
@@ -66,7 +69,8 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
       _busy = true;
       _error = null;
     });
-    final ok = await ref.read(twoFactorServiceProvider).disable(_codeController.text);
+    final uid = ref.read(currentUserProvider).uid;
+    final ok = await ref.read(twoFactorServiceProvider).disable(uid, _codeController.text);
     if (!mounted) return;
     setState(() => _busy = false);
     if (!ok) {
