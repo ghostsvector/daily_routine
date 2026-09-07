@@ -4,5 +4,11 @@
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
+	<!-- Required under App Sandbox for any outbound connection — without
+	     it, Firebase Auth/Firestore (and everything else this app does
+	     over HTTP) would be blocked at the OS level in a sandboxed
+	     release build. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
 </dict>
 </plist>
