@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../providers/auth_providers.dart';
 import '../providers/two_factor_providers.dart';
@@ -121,9 +122,21 @@ class _TwoFactorSetupScreenState extends ConsumerState<TwoFactorSetupScreen> {
               ),
             ] else ...[
               const Text(
-                'In your authenticator app, choose "Enter a setup key" and paste '
-                'this secret (or the full URI), then enter the 6-digit code it '
-                'shows you below.',
+                'Scan this with your authenticator app, or choose "Enter a setup '
+                'key" and paste the secret below, then enter the 6-digit code it '
+                'shows you.',
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  color: Colors.white,
+                  child: QrImageView(
+                    data: _provisioningUri!,
+                    version: QrVersions.auto,
+                    size: 220,
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               _CopyableSecret(uri: _provisioningUri!),
