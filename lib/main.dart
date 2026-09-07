@@ -1,9 +1,10 @@
 import 'dart:async';
 
 import 'package:daily_routine_sdk/daily_routine_sdk.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart'
-    show FlutterErrorDetails, TargetPlatform, defaultTargetPlatform, kIsWeb;
+    show FlutterErrorDetails, TargetPlatform, debugPrint, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,8 +58,28 @@ Future<void> main() async {
         final options = getFirebaseOptions();
         if (isLinuxDesktop) {
           RestFirebaseConfig.configure(projectId: options.projectId, apiKey: options.apiKey);
+          // Every REST call the SDK makes on this platform already attaches
+          // this device's App Check debug token (see AppCheckHttpClient) —
+          // logging it here is just so it's discoverable for the one-time
+          // registration step: Firebase console → App Check → this app →
+          // "Manage debug tokens". Firestore ignores the header entirely
+          // until App Check enforcement is turned on for Firestore, so this
+          // is safe to ship before that switch is flipped.
+          final debugToken = await const AppCheckDebugTokenStore().getOrCreate();
+          debugPrint('[AppCheck] This device\'s debug token: $debugToken');
         } else {
           await Firebase.initializeApp(options: options);
+          // Not distributed through app stores — direct .apk/.deb downloads
+          // from GitHub Releases — so Play Integrity/App Attest (which
+          // assume a store-installed binary) would likely fail or degrade
+          // for real users. The debug provider is the honest fit for this
+          // distribution model: a token registered once per install,
+          // mirroring the Linux REST path's AppCheckDebugTokenStore above.
+          // Revisit if this ever ships through Play/App Store.
+          await FirebaseAppCheck.instance.activate(
+            androidProvider: AndroidProvider.debug,
+            appleProvider: AppleProvider.debug,
+          );
         }
       } catch (e) {
         firebaseInitError = e;
