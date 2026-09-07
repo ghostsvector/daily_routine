@@ -1,3 +1,8 @@
+## v1.2.5 — 2026-09-07
+
+- Update CHANGELOG.md for v1.2.4 [skip ci]
+- Disable Android backup — closes an APK pentest finding
+
 ## v1.2.4 — 2026-09-07
 
 - Sync 2FA across devices via an encrypted Firestore record
