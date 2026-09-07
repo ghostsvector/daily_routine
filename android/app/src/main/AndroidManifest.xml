@@ -12,7 +12,15 @@
     <application
         android:label="daily_routine"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false">
+        <!-- Local secrets (Murthy's encryption key, TOTP secret/sync key,
+             App Check debug token) live in the OS keystore by design and are
+             never meant to leave this device — Android's backup mechanisms
+             are an unnecessary extra surface for them, so it's off entirely
+             rather than trying to enumerate what to exclude. -->
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
