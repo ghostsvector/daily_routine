@@ -22,8 +22,12 @@ command -v sha256sum >/dev/null || { echo "Error: sha256sum not found" >&2; exit
 
 if [[ -z "$VERSION" ]]; then
     echo "==> Looking up the latest release"
-    VERSION="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
-        | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')"
+    # Captured into a variable rather than piped straight into grep -m1 —
+    # grep -m1 closes its input as soon as it finds a match, and curl then
+    # errors ("Failure writing output to destination") trying to write to
+    # the now-closed pipe. Capturing first lets curl finish cleanly.
+    API_RESPONSE="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest")"
+    VERSION="$(printf '%s' "$API_RESPONSE" | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')"
     if [[ -z "$VERSION" ]]; then
         echo "Error: couldn't determine the latest release tag" >&2
         exit 1
