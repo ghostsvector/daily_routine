@@ -96,6 +96,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.shield_outlined),
+            title: const Text('Two-factor authentication'),
+            subtitle: const Text(
+              'Require a code from an authenticator app to sign in.',
+            ),
+            onTap: () => context.push('/2fa-setup'),
+          ),
+          const Divider(),
+          ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text('About'),
             subtitle: Text(
