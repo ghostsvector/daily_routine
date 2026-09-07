@@ -1,3 +1,8 @@
+## v1.2.7 — 2026-09-07
+
+- Update CHANGELOG.md for v1.2.6 [skip ci]
+- Register Google Sign-In's URL scheme for iOS
+
 ## v1.2.6 — 2026-09-07
 
 - Update CHANGELOG.md for v1.2.5 [skip ci]
