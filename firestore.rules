@@ -32,6 +32,14 @@ service cloud.firestore {
       match /murthyProgress/{dateId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+
+      match /loans/{loanId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        match /payments/{paymentId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
     }
   }
 }

@@ -87,6 +87,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.account_balance_outlined),
+            title: const Text('Loans'),
+            subtitle: const Text(
+              'Track home loan balance, pending months & pending amount.',
+            ),
+            onTap: () => context.push('/loan'),
+          ),
+          const Divider(),
+          ListTile(
             leading: const Icon(Icons.fact_check_outlined),
             title: const Text('Murthy'),
             subtitle: const Text(
