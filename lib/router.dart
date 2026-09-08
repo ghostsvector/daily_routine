@@ -13,6 +13,7 @@ import 'features/auth/screens/two_factor_setup_screen.dart';
 import 'features/blocking/screens/blocked_apps_screen.dart';
 import 'features/blocking/screens/focus_session_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
+import 'features/loan/screens/loan_screen.dart';
 import 'features/murthy/screens/murthy_screen.dart';
 import 'features/routines/screens/edit_task_screen.dart';
 import 'features/routines/screens/home_screen.dart';
@@ -115,6 +116,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/dashboard',
         builder: (context, state) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: '/loan',
+        builder: (context, state) => const LoanScreen(),
       ),
       GoRoute(
         path: '/2fa',

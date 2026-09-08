@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../loan/widgets/loan_summary_card.dart';
 import '../providers/dashboard_providers.dart';
 import '../widgets/usage_donut_chart.dart';
 
@@ -36,6 +37,8 @@ class DashboardScreen extends ConsumerWidget {
               totalTasks: totalTasks,
               tracked: total,
             ),
+            const SizedBox(height: 16),
+            const LoanSummaryCard(),
             const SizedBox(height: 16),
             if (slices.isEmpty)
               const _EmptyState()
