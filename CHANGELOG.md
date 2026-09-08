@@ -1,3 +1,10 @@
+## v1.3.0 — 2026-09-08
+
+- Update CHANGELOG.md for v1.2.7 [skip ci]
+- Split install_deb.sh: download+install vs. build from source
+- Fix broken-pipe error in install_deb.sh's latest-release lookup
+- feat: add loan management feature with CRUD operations
+
 ## v1.2.7 — 2026-09-07
 
 - Update CHANGELOG.md for v1.2.6 [skip ci]
