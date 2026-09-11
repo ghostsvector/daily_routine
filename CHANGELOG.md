@@ -1,3 +1,10 @@
+## v1.3.1 — 2026-09-11
+
+- Update CHANGELOG.md for v1.3.0 [skip ci]
+- Delete .vscode directory
+- Add bank-reported loan overrides, insurance tracking, and full payment history UI
+- Update GitHub account references after kasinadhsarma → ghostsvector rename
+
 ## v1.3.0 — 2026-09-08
 
 - Update CHANGELOG.md for v1.2.7 [skip ci]
