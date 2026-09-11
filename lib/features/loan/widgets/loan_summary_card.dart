@@ -104,6 +104,11 @@ class _LoanRow extends StatelessWidget {
               value: '${summary.monthsPending} / ${loan.tenureMonths}',
             ),
             _MiniStat(label: 'Pending amount', value: _money(summary.pendingAmount)),
+            if (loan.insurancePremium != null)
+              _MiniStat(
+                label: 'Insurance',
+                value: _money(loan.insurancePremium!),
+              ),
           ],
         ),
       ],

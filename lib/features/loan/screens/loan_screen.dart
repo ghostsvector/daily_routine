@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../auth/providers/auth_providers.dart';
@@ -70,6 +71,21 @@ class LoanScreen extends ConsumerWidget {
     );
     final emiController = TextEditingController(
       text: existing?.emiOverride?.toStringAsFixed(0) ?? '',
+    );
+    final outstandingController = TextEditingController(
+      text: existing?.outstandingBalanceOverride?.toStringAsFixed(0) ?? '',
+    );
+    final remainingMonthsController = TextEditingController(
+      text: existing?.remainingMonthsOverride?.toString() ?? '',
+    );
+    final insurancePremiumController = TextEditingController(
+      text: existing?.insurancePremium?.toStringAsFixed(0) ?? '',
+    );
+    final insuranceProviderController = TextEditingController(
+      text: existing?.insuranceProvider ?? '',
+    );
+    final insuranceNoteController = TextEditingController(
+      text: existing?.insuranceNote ?? '',
     );
     var startDate = existing?.startDate ?? DateTime.now();
 
@@ -142,6 +158,66 @@ class LoanScreen extends ConsumerWidget {
                     if (picked != null) setState(() => startDate = picked);
                   },
                 ),
+                const Divider(height: 24),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Bank-reported figures (optional)',
+                    style: Theme.of(dialogContext).textTheme.labelLarge,
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(top: 4, bottom: 8),
+                  child: Text(
+                    'From a recent statement — used instead of our estimate '
+                    'when set, since rate changes over time drift a computed '
+                    'schedule away from what the bank actually reports.',
+                  ),
+                ),
+                TextField(
+                  controller: outstandingController,
+                  decoration: const InputDecoration(
+                    labelText: 'Outstanding balance',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+                TextField(
+                  controller: remainingMonthsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Remaining tenure (months)',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const Divider(height: 24),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Insurance (optional)',
+                    style: Theme.of(dialogContext).textTheme.labelLarge,
+                  ),
+                ),
+                TextField(
+                  controller: insurancePremiumController,
+                  decoration: const InputDecoration(
+                    labelText: 'Premium amount',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+                TextField(
+                  controller: insuranceProviderController,
+                  decoration: const InputDecoration(
+                    labelText: 'Provider',
+                    hintText: 'e.g. SBI General Insurance',
+                  ),
+                ),
+                TextField(
+                  controller: insuranceNoteController,
+                  decoration: const InputDecoration(labelText: 'Note'),
+                ),
               ],
             ),
           ),
@@ -164,6 +240,15 @@ class LoanScreen extends ConsumerWidget {
                 }
                 final rate = double.tryParse(rateController.text.trim());
                 final emiOverride = double.tryParse(emiController.text.trim());
+                final outstandingOverride = double.tryParse(
+                  outstandingController.text.trim(),
+                );
+                final remainingMonthsOverride = int.tryParse(
+                  remainingMonthsController.text.trim(),
+                );
+                final insurancePremium = double.tryParse(
+                  insurancePremiumController.text.trim(),
+                );
                 final loan = Loan(
                   id: existing?.id ?? const Uuid().v4(),
                   name: nameController.text.trim(),
@@ -172,6 +257,13 @@ class LoanScreen extends ConsumerWidget {
                   tenureMonths: tenure,
                   startDate: startDate,
                   emiOverride: emiOverride,
+                  outstandingBalanceOverride: outstandingOverride,
+                  remainingMonthsOverride: remainingMonthsOverride,
+                  insurancePremium: insurancePremium,
+                  insuranceProvider: insuranceProviderController.text.trim().isEmpty
+                      ? null
+                      : insuranceProviderController.text.trim(),
+                  insuranceNote: insuranceNoteController.text.trim(),
                   createdAt: existing?.createdAt,
                 );
                 await ref.read(loanRepositoryProvider).upsertLoan(user.uid, loan);
@@ -266,6 +358,28 @@ class _LoanCard extends ConsumerWidget {
                 minHeight: 6,
               ),
             ],
+            if (loan.insurancePremium != null ||
+                (loan.insuranceProvider ?? '').isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Icon(Icons.verified_user_outlined, size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      [
+                        if (loan.insurancePremium != null)
+                          _money(loan.insurancePremium!),
+                        if ((loan.insuranceProvider ?? '').isNotEmpty)
+                          loan.insuranceProvider!,
+                        if (loan.insuranceNote.isNotEmpty) loan.insuranceNote,
+                      ].join(' · '),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -291,31 +405,29 @@ class _LoanCard extends ConsumerWidget {
                     child: Text('No payments logged yet.'),
                   );
                 }
-                final recent = payments.reversed.take(5).toList();
+                final recent = payments.reversed.take(3).toList();
                 return Column(
-                  children: recent
-                      .map(
-                        (p) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                          title: Text(_money(p.amount)),
-                          subtitle: Text(
-                            '${p.paidDate.year}-${p.paidDate.month.toString().padLeft(2, '0')}-${p.paidDate.day.toString().padLeft(2, '0')}'
-                            '${p.note.isNotEmpty ? ' · ${p.note}' : ''}',
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete_outline, size: 18),
-                            onPressed: () async {
-                              final user = ref.read(currentUserProvider);
-                              if (user.isEmpty) return;
-                              await ref
-                                  .read(loanRepositoryProvider)
-                                  .deletePayment(user.uid, loan.id, p.id);
-                            },
-                          ),
+                  children: [
+                    ...recent.map(
+                      (p) => ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        title: Text(_money(p.amount)),
+                        subtitle: Text(
+                          '${p.paidDate.year}-${p.paidDate.month.toString().padLeft(2, '0')}-${p.paidDate.day.toString().padLeft(2, '0')}'
+                          '${p.note.isNotEmpty ? ' · ${p.note}' : ''}',
                         ),
-                      )
-                      .toList(),
+                      ),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      leading: const Icon(Icons.receipt_long_outlined, size: 20),
+                      title: Text('View all ${payments.length} payments'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/loan/${loan.id}/payments'),
+                    ),
+                  ],
                 );
               },
             ),

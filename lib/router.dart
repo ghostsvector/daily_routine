@@ -14,6 +14,7 @@ import 'features/blocking/screens/blocked_apps_screen.dart';
 import 'features/blocking/screens/focus_session_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/loan/screens/loan_screen.dart';
+import 'features/loan/screens/payment_history_screen.dart';
 import 'features/murthy/screens/murthy_screen.dart';
 import 'features/routines/screens/edit_task_screen.dart';
 import 'features/routines/screens/home_screen.dart';
@@ -120,6 +121,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/loan',
         builder: (context, state) => const LoanScreen(),
+      ),
+      GoRoute(
+        path: '/loan/:id/payments',
+        builder: (context, state) => PaymentHistoryScreen(
+          loanId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         path: '/2fa',

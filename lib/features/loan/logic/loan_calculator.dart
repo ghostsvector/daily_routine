@@ -118,24 +118,51 @@ List<LoanScheduleEntry> buildAmortizationSchedule(Loan loan) {
 
 /// Rolls up [loan] + its logged [payments] into the numbers a dashboard
 /// cares about: remaining balance, pending months, pending amount.
+///
+/// When [Loan.outstandingBalanceOverride]/[Loan.remainingMonthsOverride] are
+/// set (a bank statement's own reported figures), those are used directly
+/// instead of the amortization estimate — important for floating-rate loans,
+/// where rate changes over the loan's life make a fixed-schedule estimate
+/// drift from what the bank actually reports.
 LoanSummary computeLoanSummary(Loan loan, List<LoanPayment> payments) {
   final emi = computeEmi(loan);
   final totalPayable = emi * loan.tenureMonths;
   final totalPaid = payments.fold<double>(0, (sum, p) => sum + p.amount);
-  final schedule = buildAmortizationSchedule(loan);
 
-  final monthsPaid = emi <= 0
-      ? 0
-      : (totalPaid / emi).floor().clamp(0, loan.tenureMonths);
-  final monthsPending = loan.tenureMonths - monthsPaid;
+  final hasBankReportedFigures =
+      loan.outstandingBalanceOverride != null ||
+      loan.remainingMonthsOverride != null;
 
-  final outstandingPrincipal = schedule.isEmpty
-      ? loan.principal
-      : (monthsPaid == 0
-            ? loan.principal
-            : schedule[monthsPaid - 1].balanceAfter);
+  int monthsPending;
+  double outstandingPrincipal;
+  double pendingAmount;
+  int monthsPaid;
 
-  final pendingAmount = (totalPayable - totalPaid).clamp(0, totalPayable);
+  if (hasBankReportedFigures) {
+    monthsPending = (loan.remainingMonthsOverride ?? loan.tenureMonths).clamp(
+      0,
+      loan.tenureMonths,
+    );
+    monthsPaid = loan.tenureMonths - monthsPending;
+    outstandingPrincipal = loan.outstandingBalanceOverride ?? loan.principal;
+    // Best estimate of what's still payable (principal + remaining
+    // interest) from here — EMI × remaining months, not the original
+    // schedule's total, since that would ignore payments/rate changes
+    // already reflected in the bank-reported balance.
+    pendingAmount = (emi * monthsPending).clamp(0, double.infinity);
+  } else {
+    final schedule = buildAmortizationSchedule(loan);
+    monthsPaid = emi <= 0
+        ? 0
+        : (totalPaid / emi).floor().clamp(0, loan.tenureMonths);
+    monthsPending = loan.tenureMonths - monthsPaid;
+    outstandingPrincipal = schedule.isEmpty
+        ? loan.principal
+        : (monthsPaid == 0
+              ? loan.principal
+              : schedule[monthsPaid - 1].balanceAfter);
+    pendingAmount = (totalPayable - totalPaid).clamp(0, totalPayable);
+  }
 
   return LoanSummary(
     loan: loan,
