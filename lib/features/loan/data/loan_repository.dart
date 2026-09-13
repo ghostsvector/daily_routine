@@ -150,17 +150,14 @@ class _FirestoreLoanBackend implements _LoanBackend {
 class _RestLoanBackend implements _LoanBackend {
   _RestLoanBackend({http.Client? client}) : _client = client ?? http.Client();
 
-  static const pollInterval = Duration(minutes: 5);
   static const _logName = 'LoanRepository(REST)';
 
   final http.Client _client;
 
   final Map<String, StreamController<List<_LoanDoc>>> _loanControllers = {};
-  final Map<String, Timer> _loanTimers = {};
 
   final Map<String, StreamController<List<_LoanDoc>>> _paymentControllers =
       {};
-  final Map<String, Timer> _paymentTimers = {};
 
   String _loansUrl(String uid) =>
       'https://firestore.googleapis.com/v1/projects/'
@@ -185,17 +182,18 @@ class _RestLoanBackend implements _LoanBackend {
 
     late final StreamController<List<_LoanDoc>> controller;
     controller = StreamController<List<_LoanDoc>>.broadcast(
-      onListen: () {
-        _loanTimers[uid] ??= Timer.periodic(pollInterval, (_) => _pollLoans(uid));
-        unawaited(_pollLoans(uid));
-      },
-      onCancel: () {
-        _loanTimers.remove(uid)?.cancel();
-        _loanControllers.remove(uid);
-      },
+      onListen: () => unawaited(_pollLoans(uid)),
+      onCancel: () => _loanControllers.remove(uid),
     );
     _loanControllers[uid] = controller;
     return controller.stream;
+  }
+
+  /// Triggers an out-of-band poll right now instead of waiting for the next
+  /// subscription — called after a write so its own effect is visible
+  /// immediately (there's no background poll timer to otherwise catch it).
+  void _refreshLoansNow(String uid) {
+    if (_loanControllers.containsKey(uid)) unawaited(_pollLoans(uid));
   }
 
   Future<void> _pollLoans(String uid) async {
@@ -247,6 +245,7 @@ class _RestLoanBackend implements _LoanBackend {
         'Firestore REST upsertLoan failed: ${response.statusCode} ${response.body}',
       );
     }
+    _refreshLoansNow(uid);
   }
 
   @override
@@ -262,6 +261,7 @@ class _RestLoanBackend implements _LoanBackend {
         'Firestore REST deleteLoan failed: ${response.statusCode} ${response.body}',
       );
     }
+    _refreshLoansNow(uid);
   }
 
   @override
@@ -272,20 +272,17 @@ class _RestLoanBackend implements _LoanBackend {
 
     late final StreamController<List<_LoanDoc>> controller;
     controller = StreamController<List<_LoanDoc>>.broadcast(
-      onListen: () {
-        _paymentTimers[key] ??= Timer.periodic(
-          pollInterval,
-          (_) => _pollPayments(uid, loanId),
-        );
-        unawaited(_pollPayments(uid, loanId));
-      },
-      onCancel: () {
-        _paymentTimers.remove(key)?.cancel();
-        _paymentControllers.remove(key);
-      },
+      onListen: () => unawaited(_pollPayments(uid, loanId)),
+      onCancel: () => _paymentControllers.remove(key),
     );
     _paymentControllers[key] = controller;
     return controller.stream;
+  }
+
+  /// See [_refreshLoansNow]'s identical reasoning.
+  void _refreshPaymentsNow(String uid, String loanId) {
+    final key = '$uid/$loanId';
+    if (_paymentControllers.containsKey(key)) unawaited(_pollPayments(uid, loanId));
   }
 
   Future<void> _pollPayments(String uid, String loanId) async {
@@ -341,6 +338,7 @@ class _RestLoanBackend implements _LoanBackend {
         'Firestore REST upsertPayment failed: ${response.statusCode} ${response.body}',
       );
     }
+    _refreshPaymentsNow(uid, loanId);
   }
 
   @override
@@ -362,5 +360,6 @@ class _RestLoanBackend implements _LoanBackend {
         'Firestore REST deletePayment failed: ${response.statusCode} ${response.body}',
       );
     }
+    _refreshPaymentsNow(uid, loanId);
   }
 }
