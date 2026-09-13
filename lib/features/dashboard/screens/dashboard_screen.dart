@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../loan/widgets/loan_summary_card.dart';
 import '../providers/dashboard_providers.dart';
@@ -24,7 +25,16 @@ class DashboardScreen extends ConsumerWidget {
     final (completed, totalTasks) = ref.watch(dashboardRoutineStatsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Dashboard')),
+      appBar: AppBar(
+        title: const Text('Dashboard'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month_outlined),
+            tooltip: 'Monthly summary',
+            onPressed: () => context.push('/monthly-summary'),
+          ),
+        ],
+      ),
       body: activityAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) =>

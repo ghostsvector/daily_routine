@@ -78,6 +78,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.calendar_month_outlined),
+            title: const Text('Monthly summary'),
+            subtitle: const Text(
+              'Task completion rate & activity tracked, by month.',
+            ),
+            onTap: () => context.push('/monthly-summary'),
+          ),
+          const Divider(),
+          ListTile(
             leading: const Icon(Icons.bar_chart_outlined),
             title: const Text('Activity'),
             subtitle: const Text(
