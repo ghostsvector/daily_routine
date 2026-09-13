@@ -15,6 +15,7 @@ import 'features/blocking/screens/focus_session_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/loan/screens/loan_screen.dart';
 import 'features/loan/screens/payment_history_screen.dart';
+import 'features/monthly_summary/screens/monthly_summary_screen.dart';
 import 'features/murthy/screens/murthy_screen.dart';
 import 'features/routines/screens/edit_task_screen.dart';
 import 'features/routines/screens/home_screen.dart';
@@ -117,6 +118,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/dashboard',
         builder: (context, state) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: '/monthly-summary',
+        builder: (context, state) => const MonthlySummaryScreen(),
       ),
       GoRoute(
         path: '/loan',
