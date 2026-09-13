@@ -162,18 +162,15 @@ class _FirestoreMurthyBackend implements _MurthyBackend {
 class _RestMurthyBackend implements _MurthyBackend {
   _RestMurthyBackend({http.Client? client}) : _client = client ?? http.Client();
 
-  static const pollInterval = Duration(minutes: 5);
   static const _logName = 'MurthyRepository(REST)';
 
   final http.Client _client;
 
   final Map<String, StreamController<List<_MurthyDoc>>> _protocolControllers =
       {};
-  final Map<String, Timer> _protocolTimers = {};
 
   final Map<String, StreamController<Map<String, dynamic>?>>
   _progressControllers = {};
-  final Map<String, Timer> _progressTimers = {};
 
   String _protocolsUrl(String uid) =>
       'https://firestore.googleapis.com/v1/projects/'
@@ -200,20 +197,18 @@ class _RestMurthyBackend implements _MurthyBackend {
 
     late final StreamController<List<_MurthyDoc>> controller;
     controller = StreamController<List<_MurthyDoc>>.broadcast(
-      onListen: () {
-        _protocolTimers[uid] ??= Timer.periodic(
-          pollInterval,
-          (_) => _pollProtocols(uid),
-        );
-        unawaited(_pollProtocols(uid));
-      },
-      onCancel: () {
-        _protocolTimers.remove(uid)?.cancel();
-        _protocolControllers.remove(uid);
-      },
+      onListen: () => unawaited(_pollProtocols(uid)),
+      onCancel: () => _protocolControllers.remove(uid),
     );
     _protocolControllers[uid] = controller;
     return controller.stream;
+  }
+
+  /// Triggers an out-of-band poll right now instead of waiting for the next
+  /// subscription — called after a write so its own effect is visible
+  /// immediately (there's no background poll timer to otherwise catch it).
+  void _refreshProtocolsNow(String uid) {
+    if (_protocolControllers.containsKey(uid)) unawaited(_pollProtocols(uid));
   }
 
   Future<void> _pollProtocols(String uid) async {
@@ -266,6 +261,7 @@ class _RestMurthyBackend implements _MurthyBackend {
         'Firestore REST upsertProtocol failed: ${response.statusCode} ${response.body}',
       );
     }
+    _refreshProtocolsNow(uid);
   }
 
   @override
@@ -281,6 +277,7 @@ class _RestMurthyBackend implements _MurthyBackend {
         'Firestore REST deleteProtocol failed: ${response.statusCode} ${response.body}',
       );
     }
+    _refreshProtocolsNow(uid);
   }
 
   @override
@@ -291,20 +288,17 @@ class _RestMurthyBackend implements _MurthyBackend {
 
     late final StreamController<Map<String, dynamic>?> controller;
     controller = StreamController<Map<String, dynamic>?>.broadcast(
-      onListen: () {
-        _progressTimers[key] ??= Timer.periodic(
-          pollInterval,
-          (_) => _pollProgress(uid, dateKey),
-        );
-        unawaited(_pollProgress(uid, dateKey));
-      },
-      onCancel: () {
-        _progressTimers.remove(key)?.cancel();
-        _progressControllers.remove(key);
-      },
+      onListen: () => unawaited(_pollProgress(uid, dateKey)),
+      onCancel: () => _progressControllers.remove(key),
     );
     _progressControllers[key] = controller;
     return controller.stream;
+  }
+
+  /// See [_refreshProtocolsNow]'s identical reasoning.
+  void _refreshProgressNow(String uid, String dateKey) {
+    final key = '$uid/$dateKey';
+    if (_progressControllers.containsKey(key)) unawaited(_pollProgress(uid, dateKey));
   }
 
   Future<void> _pollProgress(String uid, String dateKey) async {
@@ -354,5 +348,6 @@ class _RestMurthyBackend implements _MurthyBackend {
         'Firestore REST upsertProgress failed: ${response.statusCode} ${response.body}',
       );
     }
+    _refreshProgressNow(uid, dateKey);
   }
 }
