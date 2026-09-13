@@ -150,7 +150,7 @@ class _FirestoreLoanBackend implements _LoanBackend {
 class _RestLoanBackend implements _LoanBackend {
   _RestLoanBackend({http.Client? client}) : _client = client ?? http.Client();
 
-  static const pollInterval = Duration(seconds: 60);
+  static const pollInterval = Duration(minutes: 5);
   static const _logName = 'LoanRepository(REST)';
 
   final http.Client _client;

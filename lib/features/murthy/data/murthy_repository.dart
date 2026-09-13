@@ -162,7 +162,7 @@ class _FirestoreMurthyBackend implements _MurthyBackend {
 class _RestMurthyBackend implements _MurthyBackend {
   _RestMurthyBackend({http.Client? client}) : _client = client ?? http.Client();
 
-  static const pollInterval = Duration(seconds: 60);
+  static const pollInterval = Duration(minutes: 5);
   static const _logName = 'MurthyRepository(REST)';
 
   final http.Client _client;
