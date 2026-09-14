@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/murthy_assistant_providers.dart';
 
 /// "Ask Murthy" — type a topic you've forgotten, get it explained and
-/// spoken aloud by the local LLM/voice pair described in
-/// `MurthyAssistantConfig`'s doc comment. Only rendered on platforms where
-/// that's configured (see [murthyAssistantAvailableProvider]) — currently
-/// Linux desktop only, with a local `murthy-voice` clone.
+/// spoken aloud. Android runs its own on-device model/voice; Linux desktop
+/// needs a local `murthy-voice` clone configured via `MurthyAssistantConfig`
+/// (see its doc comment). Only rendered where one of those is available
+/// (see [murthyAssistantAvailableProvider]) — no iOS/macOS/Windows path yet.
 class AskMurthySection extends ConsumerStatefulWidget {
   const AskMurthySection({super.key});
 

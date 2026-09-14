@@ -1,26 +1,36 @@
 import 'package:daily_routine_sdk/daily_routine_sdk.dart';
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// False when [MurthyAssistantConfig] hasn't been configured (not Linux
-/// desktop, or `MURTHY_PYTHON_EXECUTABLE`/`MURTHY_VOICE_REPO_PATH` aren't
-/// set in `.env`/`.env.local` — see `main.dart`) — the "Ask Murthy" UI
-/// hides itself in that case rather than erroring when tapped.
-final murthyAssistantAvailableProvider = Provider<bool>(
-  (ref) => MurthyAssistantConfig.isConfigured,
-);
+/// Whether "Ask Murthy" should show itself at all: unconditionally true on
+/// Android (self-contained — downloads its own model, no setup needed);
+/// on Linux desktop, only once [MurthyAssistantConfig] has been configured
+/// (`MURTHY_PYTHON_EXECUTABLE`/`MURTHY_VOICE_REPO_PATH` in `.env`/
+/// `.env.local` — see `main.dart`); false everywhere else (no
+/// implementation yet).
+final murthyAssistantAvailableProvider = Provider<bool>((ref) {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) return true;
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+    return MurthyAssistantConfig.isConfigured;
+  }
+  return false;
+});
 
-/// Each provider owns one long-lived subprocess (see
-/// LinuxProcessAssistantService/LinuxProcessVoiceService) — `ref.onDispose`
+/// Each provider owns one long-lived engine/subprocess — `ref.onDispose`
 /// tears it down if the provider itself is ever disposed (it isn't
 /// `autoDispose`, so in practice that's only on app shutdown).
 final assistantServiceProvider = Provider<AssistantService>((ref) {
-  final service = LinuxProcessAssistantService();
+  final AssistantService service = defaultTargetPlatform == TargetPlatform.android
+      ? AndroidLlamaAssistantService()
+      : LinuxProcessAssistantService();
   ref.onDispose(service.dispose);
   return service;
 });
 
 final voiceServiceProvider = Provider<VoiceService>((ref) {
-  final service = LinuxProcessVoiceService();
+  final VoiceService service = defaultTargetPlatform == TargetPlatform.android
+      ? FlutterTtsVoiceService()
+      : LinuxProcessVoiceService();
   ref.onDispose(service.dispose);
   return service;
 });
