@@ -85,6 +85,23 @@ Future<void> main() async {
         firebaseInitError = e;
       }
 
+      // Murthy's LLM/voice ("Ask Murthy" on the Murthy screen) drives a
+      // local clone of github.com/ghostsvector/murthy-voice as a
+      // subprocess — see MurthyAssistantConfig's doc comment for why.
+      // Entirely optional and Linux-desktop-only for now: skipped unless
+      // both paths are set, so a normal `flutter run` without that repo
+      // cloned locally isn't broken by it.
+      if (isLinuxDesktop) {
+        final pythonExecutable = dotenv.env['MURTHY_PYTHON_EXECUTABLE'];
+        final murthyVoiceRepoPath = dotenv.env['MURTHY_VOICE_REPO_PATH'];
+        if (pythonExecutable != null && murthyVoiceRepoPath != null) {
+          MurthyAssistantConfig.configure(
+            pythonExecutable: pythonExecutable,
+            murthyVoiceRepoPath: murthyVoiceRepoPath,
+          );
+        }
+      }
+
       final notificationService = LocalNotificationService(
         config: const LocalNotificationChannelConfig(
           channelId: 'routine_reminders',
