@@ -9,6 +9,10 @@
          user must still grant this via system settings ("Alarms & reminders");
          LocalNotificationService falls back to inexact scheduling if denied. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Firebase already merges this in, but "Ask Murthy" (AndroidLlamaAssistantService)
+         downloading its ~1.1GB model on first use is a big enough new use of it
+         to declare explicitly. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="daily_routine"
         android:name="${applicationName}"
