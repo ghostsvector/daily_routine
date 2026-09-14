@@ -7,7 +7,9 @@ import '../../auth/providers/auth_providers.dart';
 import '../data/murthy_crypto_service.dart';
 import '../models/daily_progress_entry.dart';
 import '../models/daily_protocol.dart';
+import '../providers/murthy_assistant_providers.dart';
 import '../providers/murthy_providers.dart';
+import 'ask_murthy_section.dart';
 
 /// "Murthy" — today's progress, a daily summary note, and the recurring
 /// daily protocols you're holding yourself to. Everything here is
@@ -21,6 +23,7 @@ class MurthyScreen extends ConsumerWidget {
     final (completed, total) = ref.watch(todayRoutineStatsProvider);
     final protocolsAsync = ref.watch(dailyProtocolsProvider);
     final progressAsync = ref.watch(todayProgressProvider);
+    final assistantAvailable = ref.watch(murthyAssistantAvailableProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -49,6 +52,10 @@ class MurthyScreen extends ConsumerWidget {
           _SummaryCard(progressAsync: progressAsync),
           const SizedBox(height: 16),
           _ProtocolsSection(protocolsAsync: protocolsAsync),
+          if (assistantAvailable) ...[
+            const SizedBox(height: 16),
+            const AskMurthySection(),
+          ],
         ],
       ),
     );
