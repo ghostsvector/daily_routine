@@ -114,6 +114,16 @@ jobs:
       # override, nothing needs to be in it for a release build).
       - run: touch .env.local
 
+      # google-services.json is gitignored (it's a real Firebase project
+      # credential — see the .gitignore comment above it), so the Android
+      # build needs it reconstructed here. Store the file's full contents,
+      # base64-encoded, as the GOOGLE_SERVICES_JSON_BASE64 repo secret:
+      #   base64 -w0 android/app/google-services.json | pbcopy   (or xclip)
+      # One file covers both flavors — the Google Services plugin picks
+      # the right client block by applicationId at build time.
+      - name: Write google-services.json from repository secret
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 -d > android/app/google-services.json
+
       # daily_routine_sdk is a private repo, fetched over SSH via a
       # read-only deploy key (see pubspec.yaml).
       - uses: webfactory/ssh-agent@v0.9.0
