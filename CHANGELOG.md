@@ -1,3 +1,95 @@
+## v1.4.0 — 2026-09-26
+
+- Add Windows runner support with DPI awareness and console output
+- Update Flutter plugin imports and dependencies for macOS and Dart compatibility
+- Update Android configuration and enhance task scheduling features
+- Update Android compileSdk version and adjust local dependency for daily_routine_sdk
+- Update daily schedule tasks and enhance task tile UI for better clarity
+- Refactor code structure for improved readability and maintainability
+- Add SCHEDULE_EXACT_ALARM permission and enhance install_deb.sh for better package management
+- Request notification permissions for accurate alarm delivery on Android 12+
+- Implement activity tracking feature with Chrome extension integration and Firestore support
+- Fix activity tile subtitle logic and update title display in ActivityScreen
+- Add MIT License file to the repository
+- Add CI and tag-triggered release workflows
+- Move daily_routine_sdk dev override out of tracked pubspec.yaml
+- Fetch daily_routine_sdk over SSH in CI via a read-only deploy key
+- Create empty .env.local placeholder in CI so analyze doesn't fail
+- Install libsecret-1-dev so the CI Linux build can compile
+- Rewrite README for actual project scope, add security policy
+- Extract chrome_extension into its own public repo
+- Fetch full history in release workflow to fix gh release create bug
+- Add Murthy: encrypted daily progress/protocols + local voice assistant
+- Add usage dashboard; fix CI-breaking analyzer warning
+- Bump version to 1.1.0 for release
+- Fix Android manifest merge conflict with flutter_background_service
+- Remove Murthy voice assistant (Hey Murthy)
+- Remove stale dist/ build artifact, gitignore the folder
+- Fix task completion not resetting daily
+- Bump version to 1.1.1 for release
+- Fix Dashboard/Activity exhausting Firestore's quota on Linux
+- Stop activity/Murthy providers polling forever in the background
+- Add daily activity rollup so the raw log never grows unbounded
+- Add a downloads badge to the README
+- GPG-sign release artifacts and publish checksums
+- Bump version to 1.1.5 for release
+- Show app version under Settings > About
+- Switch rollover/Murthy poll logging from dart:developer to debugPrint
+- Wire up Crashlytics crash reporting
+- Fold task-completion counts into the daily activity summary
+- Auto-generate CHANGELOG.md on every release
+- Backfill CHANGELOG.md from commit history, fix release notes automation
+- Sign CI's automated CHANGELOG commits with a dedicated commit-signing key
+- test: verify commit signature with matching email
+- test: verify commit signature with corrected email/key
+- test: verify commit signature with noreply email
+- Fix commit-signing key ID in release workflow to match the corrected key
+- Add architecture documentation covering the whole ecosystem
+- Remove analysis_options.yaml, update pubspec.lock
+- Show an INTERNAL banner for the internal flavor, independent of build mode
+- Split internal/external into genuinely separate installable Android apps
+- Add TOTP-based two-factor authentication
+- Bump version to 1.2.0 for release (TOTP two-factor authentication)
+- Update CHANGELOG.md for v1.2.0 [skip ci]
+- Add QR code to the 2FA setup screen
+- Update CHANGELOG.md for v1.2.1 [skip ci]
+- Activate Firebase App Check on every platform
+- Update CHANGELOG.md for v1.2.2 [skip ci]
+- Scope TOTP 2FA secret per-account, not per-device
+- Sync 2FA across devices via an encrypted Firestore record
+- Update CHANGELOG.md for v1.2.4 [skip ci]
+- Disable Android backup — closes an APK pentest finding
+- Update CHANGELOG.md for v1.2.5 [skip ci]
+- Add missing network.client entitlement for macOS App Sandbox
+- Update CHANGELOG.md for v1.2.6 [skip ci]
+- Register Google Sign-In's URL scheme for iOS
+- Update CHANGELOG.md for v1.2.7 [skip ci]
+- Split install_deb.sh: download+install vs. build from source
+- Fix broken-pipe error in install_deb.sh's latest-release lookup
+- feat: add loan management feature with CRUD operations
+- Update CHANGELOG.md for v1.3.0 [skip ci]
+- Delete .vscode directory
+- Add bank-reported loan overrides, insurance tracking, and full payment history UI
+- Update GitHub account references after kasinadhsarma → ghostsvector rename
+- Update CHANGELOG.md for v1.3.1 [skip ci]
+- Add Monthly Summary screen: routine-task completion + activity by month
+- Reduce Linux desktop poll frequency for loans and Murthy (60s→5min)
+- Remove background polling from loan/Murthy REST backends entirely
+- Add "Ask Murthy" — LLM explanation + spoken answer (Linux desktop)
+- Merge pull request #1 from ghostsvector/claude/sdk-issues-dx6hpq
+- Wire "Ask Murthy" to Android's on-device model/voice too
+- Merge pull request #2 from ghostsvector/claude/murthy-android
+- Wire "Hey Murthy" wake word into Ask Murthy
+- Merge pull request #3 from ghostsvector/claude/hey-murthy-wake-word
+- Document the "Hey Murthy" voice assistant feature
+- Bump version to 1.4.0+22
+- Merge pull request #4 from ghostsvector/claude/hey-murthy-docs
+- Remove leaked Firebase API key from git tracking
+- Merge pull request #5 from ghostsvector/claude/remove-leaked-key
+- Add a manual trigger to release.yml
+- Reconstruct google-services.json in the release build from a secret
+- Merge pull request #6 from ghostsvector/claude/release-manual-trigger
+
 ## v1.3.1 — 2026-09-11
 
 - Update CHANGELOG.md for v1.3.0 [skip ci]
