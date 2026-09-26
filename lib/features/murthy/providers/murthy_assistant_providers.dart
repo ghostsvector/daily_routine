@@ -35,6 +35,17 @@ final voiceServiceProvider = Provider<VoiceService>((ref) {
   return service;
 });
 
+/// "Hey Murthy": a real wake-word engine on Linux, a continuous-listening
+/// approximation on Android (see [AndroidSpeechWakeWordService]'s doc
+/// comment for why).
+final wakeWordServiceProvider = Provider<WakeWordService>((ref) {
+  final WakeWordService service = defaultTargetPlatform == TargetPlatform.android
+      ? AndroidSpeechWakeWordService()
+      : LinuxProcessWakeWordService();
+  ref.onDispose(service.dispose);
+  return service;
+});
+
 /// Telugu if [text] contains any Telugu-block character, else English —
 /// mirrors `murthy-voice`'s `tts.detect_language`, used here to pick which
 /// voice speaks Murthy's answer.
