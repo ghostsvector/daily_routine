@@ -11,8 +11,15 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- Firebase already merges this in, but "Ask Murthy" (AndroidLlamaAssistantService)
          downloading its ~1.1GB model on first use is a big enough new use of it
-         to declare explicitly. -->
+         to declare explicitly. Also required by speech_to_text (AndroidSpeechWakeWordService)
+         per its own setup docs, alongside the BLUETOOTH permissions below. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- "Hey Murthy" (AndroidSpeechWakeWordService) listens continuously via the
+         OS speech recognizer. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <application
         android:label="daily_routine"
         android:name="${applicationName}"
@@ -64,6 +71,12 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Required on targetSdkVersion 30+ for speech_to_text
+             (AndroidSpeechWakeWordService) to find the device's speech
+             recognition service. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
         </intent>
     </queries>
 </manifest>
