@@ -15,10 +15,14 @@ Daily Routine isn't one repo — it's four, each with a distinct job:
 | [`daily_routine_sdk`](https://github.com/kasinadhsarma/daily_routine_sdk) | Shared data layer (Auth, Firestore, notifications, app-blocking) | Consumed as a git dependency so the data layer can be versioned and tested independently of the UI, and so a future second client (e.g. a web dashboard) could reuse it |
 | [`daily-routine-mcp`](https://github.com/kasinadhsarma/daily-routine-mcp) | An MCP server exposing this Firestore data to Claude for analysis | Data analysis tooling has nothing to do with shipping the app — bundling it would drag Node.js/MCP dependencies into a Flutter release build for no reason |
 | [`daily-routine-activity-tracker`](https://github.com/kasinadhsarma/daily-routine-activity-tracker) | A Chrome extension logging browsing activity into the same Firestore project | A Chrome extension has its own manifest/build/release lifecycle entirely unlike Flutter's; keeping it separate also means someone can install *just* the tracker without the app |
+| [`murthy-voice`](https://github.com/ghostsvector/murthy-voice) | "Hey Murthy"/"Ask Murthy" voice assistant: local LLM + TTS + wake word (see `HEY_MURTHY.md`) | Heavy CPU-ML Python dependencies (`torch`, `llama-cpp-python`, `openwakeword`) with nothing to do with Flutter; needed to be iterated on standalone before any app integration existed |
 
-All four write to (or read from) the same Firebase project, keyed by
+The first four write to (or read from) the same Firebase project, keyed by
 Firebase Auth `uid`. That's the integration point — there's no other shared
-runtime between them.
+runtime between them. `murthy-voice` is the exception: no Firebase, no
+network at all — its integration point with `daily_routine` is a local
+subprocess pipe or, on Android, a git-dependency binding, both described
+in `HEY_MURTHY.md`.
 
 ## Why Flutter + Firebase at all
 
@@ -73,6 +77,10 @@ shorter intervals caused real quota exhaustion (see below). Longer polling
 is the direct, permanent fix, not a stopgap.
 
 ### 3. Encryption layer (Murthy)
+
+Not to be confused with the *other* "Murthy" — a voice assistant/professor
+("Ask Murthy"/"Hey Murthy") sharing the same screen and name by deliberate
+choice, unrelated to anything below. See `HEY_MURTHY.md`.
 
 `daily_routine`'s Murthy feature (daily protocols, daily progress/summary)
 encrypts every document client-side with AES-256-CBC
