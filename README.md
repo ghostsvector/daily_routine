@@ -60,7 +60,11 @@ Firestore + Auth enabled.
    (Firebase console → Project settings, or run `flutterfire configure` and
    point `lib/flavors/*/firebase_options.dart` at the generated values
    instead of dotenv). Create an empty `.env.local` alongside it — it's a
-   listed asset for local-only overrides and can stay empty.
+   listed asset for local-only overrides and can stay empty. To build for
+   Android, also drop a `google-services.json` (same source: Firebase
+   console → Project settings → your Android app, or `flutterfire
+   configure`) at `android/app/google-services.json` — gitignored, never
+   commit it.
 2. `flutter pub get`
 3. `./run.sh` (interactive flavor + device picker) or
    `flutter run --dart-define=FLAVOR=external`
