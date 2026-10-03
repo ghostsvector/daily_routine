@@ -1,3 +1,9 @@
+## v1.4.1 — 2026-10-03
+
+- Update CHANGELOG.md for v1.4.0 [skip ci]
+- Add Jenkins pipeline configuration for CI/CD integration
+- Bump version to 1.4.1+23 and add Jenkins badge
+
 ## v1.4.0 — 2026-09-26
 
 - Add Windows runner support with DPI awareness and console output
