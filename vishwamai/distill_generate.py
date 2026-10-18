@@ -1,11 +1,11 @@
 """Sequence-level distillation data generator for VishwamAI.
 
-Queries one or more OpenAI-compatible teachers (OpenAI, DeepSeek, or Gemma
+Queries one or more OpenAI-compatible teachers (DeepSeek, gpt-oss, or Gemma
 served via vLLM/Ollama) and writes JSONL ready to merge into the Stage-3 SFT
 data of vishwamai_pretrain.ipynb.
 
 Keys come from environment variables (use Colab/Kaggle secrets), never code:
-    OPENAI_API_KEY, DEEPSEEK_API_KEY, GPTOSS_API_KEY, GEMMA_API_KEY (any value for local servers)
+    DEEPSEEK_API_KEY, GPTOSS_API_KEY, GEMMA_API_KEY (any value for local servers)
 
 Usage:
     python distill_generate.py --teacher deepseek --prompts prompts.jsonl \
@@ -25,7 +25,6 @@ from concurrent.futures import ThreadPoolExecutor
 from openai import OpenAI
 
 TEACHERS = {
-    'openai':   dict(base_url=None, key='OPENAI_API_KEY', model='gpt-4o-mini'),
     'deepseek': dict(base_url='https://api.deepseek.com', key='DEEPSEEK_API_KEY',
                      model='deepseek-reasoner'),
     # open-weight OpenAI models (Apache 2.0), served locally e.g. `vllm serve openai/gpt-oss-20b`
