@@ -5,7 +5,7 @@ served via vLLM/Ollama) and writes JSONL ready to merge into the Stage-3 SFT
 data of vishwamai_pretrain.ipynb.
 
 Keys come from environment variables (use Colab/Kaggle secrets), never code:
-    OPENAI_API_KEY, DEEPSEEK_API_KEY, GEMMA_API_KEY (any value for local servers)
+    OPENAI_API_KEY, DEEPSEEK_API_KEY, GPTOSS_API_KEY, GEMMA_API_KEY (any value for local servers)
 
 Usage:
     python distill_generate.py --teacher deepseek --prompts prompts.jsonl \
@@ -28,6 +28,9 @@ TEACHERS = {
     'openai':   dict(base_url=None, key='OPENAI_API_KEY', model='gpt-4o-mini'),
     'deepseek': dict(base_url='https://api.deepseek.com', key='DEEPSEEK_API_KEY',
                      model='deepseek-reasoner'),
+    # open-weight OpenAI models (Apache 2.0), served locally e.g. `vllm serve openai/gpt-oss-20b`
+    'gptoss':   dict(base_url=os.environ.get('GPTOSS_BASE_URL', 'http://localhost:8000/v1'),
+                     key='GPTOSS_API_KEY', model=os.environ.get('GPTOSS_MODEL', 'openai/gpt-oss-20b')),
     'gemma':    dict(base_url=os.environ.get('GEMMA_BASE_URL', 'http://localhost:8000/v1'),
                      key='GEMMA_API_KEY', model=os.environ.get('GEMMA_MODEL', 'google/gemma-2-9b-it')),
 }
@@ -53,7 +56,8 @@ def ask(client, cfg, ex, retries=4):
                 messages=[{'role': 'system', 'content': system},
                           {'role': 'user', 'content': ex['prompt']}])
             msg = r.choices[0].message
-            think = getattr(msg, 'reasoning_content', None) or ''   # DeepSeek R1 trace
+            think = (getattr(msg, 'reasoning_content', None)      # DeepSeek R1 trace
+                     or getattr(msg, 'reasoning', None) or '')  # gpt-oss via vLLM
             text = msg.content or ''
             if not think:                       # non-reasoning teachers: split on a marker
                 parts = re.split(r'(?i)\bfinal answer\s*:', text, maxsplit=1)
