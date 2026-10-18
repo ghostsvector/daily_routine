@@ -15,7 +15,8 @@ Usage:
 prompts.jsonl: one object per line: {"prompt": str, "lang": "en|hi|te",
 "answer": optional verifiable final answer}.
 
-Output line: {"system", "lang", "prompt", "think", "answer", "teacher"}
+Output line: {"system", "lang", "prompt", "think", "answer", "verified", "teacher"}
+(verified = matched a known ground truth; unverified numeric answers go through vote_filter.py)
 mapping onto the notebook's chat format
     <|user|>..<|end|><|assistant|><|think|>{think}<|/think|>{answer}<|end|>
 Check each teacher's licence before releasing a model trained on its output.
@@ -108,6 +109,7 @@ def main():
                 lang = ex.get('lang', 'en')
                 f.write(json.dumps(dict(system=SYSTEM.get(lang, SYSTEM['en']), lang=lang,
                                         prompt=ex['prompt'], think=think, answer=answer,
+                                        verified=ex.get('answer') is not None,
                                         teacher=a.teacher), ensure_ascii=False) + '\n')
                 kept += 1
             f.flush()
