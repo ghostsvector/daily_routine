@@ -21,7 +21,7 @@ mapping onto the notebook's chat format
     <|user|>..<|end|><|assistant|><|think|>{think}<|/think|>{answer}<|end|>
 Check each teacher's licence before releasing a model trained on its output.
 """
-import argparse, json, re
+import argparse, json, os, re
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
@@ -84,6 +84,11 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(name, **kw).eval()
 
     exs = [json.loads(l) for l in open(a.prompts, encoding='utf-8')][:a.limit]
+    seen = set()                                    # resume: skip prompts a previous (interrupted) run already answered
+    if os.path.exists(a.out):
+        seen = {json.loads(l)['prompt'] for l in open(a.out, encoding='utf-8')}
+    exs = [e for e in exs if e['prompt'] not in seen]
+    print(f'{len(seen)} already done, {len(exs)} to go', flush=True)
     kept = dropped = 0
     with open(a.out, 'a', encoding='utf-8') as f:
         for i in range(0, len(exs), a.batch):
