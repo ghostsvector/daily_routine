@@ -320,6 +320,13 @@ tail -n 2 $WORK/math/gen_a.log $WORK/math/gen_b.log
 
 
 # ==================== CELL 9  (5 · Build the SFT set (verified teacher solutions + GSM8K human solutions)) ====================
+# --- preflight: stop early with a clear message instead of a NameError ---
+_missing = [n for n in ('tok', 'gtr', 'gte', 'encode_prompt', 'make_prompt', 'MATH_SUFFIX', 'WORK', 'contaminated', 'FULL_FT') if n not in globals()]
+if _missing:
+    raise RuntimeError("Not defined yet: " + ", ".join(_missing) + ". This session was probably restarted. Run these cells first, in order: "
+                       "1) pip install  2) setup (token)  3) GSM8K data and helpers  4) load the student  5) build the SFT set"
+                       " - then run this cell again. (You need to run up to: section 3, load the student.)")
+
 def clean_human(a):
     body, ans = a.split('####'); body = re.sub(r'<<.*?>>', '', body).strip()
     return f"{body}\n#### {ans.strip().replace(',', '')}"
@@ -356,6 +363,13 @@ def collate(b):
 
 
 # ==================== CELL 10  (6 · LoRA SFT) ====================
+# --- preflight: stop early with a clear message instead of a NameError ---
+_missing = [n for n in ('FULL_FT', 'model', 'tok', 'examples', 'collate', 'NG', 'WORK', 'SLUG') if n not in globals()]
+if _missing:
+    raise RuntimeError("Not defined yet: " + ", ".join(_missing) + ". This session was probably restarted. Run these cells first, in order: "
+                       "1) pip install  2) setup (token)  3) GSM8K data and helpers  4) load the student  5) build the SFT set"
+                       " - then run this cell again. (You need to run up to: section 5, build the SFT set.)")
+
 from transformers import Trainer, TrainingArguments
 import inspect, math
 
@@ -404,6 +418,13 @@ print('saved', OUT_DIR)
 
 
 # ==================== CELL 11  (7 · Evaluate AFTER and compare) ====================
+# --- preflight: stop early with a clear message instead of a NameError ---
+_missing = [n for n in ('model', 'evaluate', 'base_acc', 'examples', 'STUDENT', 'N_EVAL', 'FULL_FT', 'WORK') if n not in globals()]
+if _missing:
+    raise RuntimeError("Not defined yet: " + ", ".join(_missing) + ". This session was probably restarted. Run these cells first, in order: "
+                       "1) pip install  2) setup (token)  3) GSM8K data and helpers  4) load the student  5) build the SFT set"
+                       " - then run this cell again. (You need to run up to: section 6, training (and run the baseline cell in section 3 or set base_acc = 0.013).)")
+
 model.config.use_cache = True
 after_acc = evaluate(model)
 print(f"{'':28s}{'GSM8K (greedy, ' + str(N_EVAL) + ' q)':>26s}")
