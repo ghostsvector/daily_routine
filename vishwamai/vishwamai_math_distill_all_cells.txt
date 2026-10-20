@@ -357,6 +357,7 @@ def collate(b):
 
 # ==================== CELL 10  (6 · LoRA SFT) ====================
 from transformers import Trainer, TrainingArguments
+import inspect, math
 
 if FULL_FT:
     GC = False                                            # 132M model: no need to trade speed for memory
@@ -372,14 +373,25 @@ else:
     model.print_trainable_parameters()
     LR, EPOCHS = 2e-4, 2
 
-PER_DEV, ACC = (4, 8) if not FULL_FT else (16, 2)   # tiny model: large per-GPU batch; lower 16 -> 8 if you hit out-of-memory
-ACC = max(1, ACC // max(1, NG))                          # Trainer uses every visible GPU (DataParallel): keep the effective batch size
-print(f'effective batch = {PER_DEV} x {max(1, NG)} GPUs x {ACC} accumulation = {PER_DEV * max(1, NG) * ACC}')
-args = TrainingArguments(output_dir=f'{WORK}/math/run_{SLUG}', per_device_train_batch_size=PER_DEV,
-        gradient_accumulation_steps=ACC, num_train_epochs=EPOCHS, learning_rate=LR,
-        lr_scheduler_type='cosine', warmup_ratio=0.03, fp16=True, logging_steps=20, save_strategy='epoch',
-        save_total_limit=1, report_to='none', gradient_checkpointing=GC, remove_unused_columns=False,
-        group_by_length=True, dataloader_num_workers=2)
+NGPU = max(1, NG)
+PER_DEV, ACC = (4, 8) if not FULL_FT else (16, 2)         # tiny model: large per-GPU batch; lower 16 -> 8 if you hit out-of-memory
+ACC = max(1, ACC // NGPU)                                  # Trainer uses every visible GPU (DataParallel): keep the effective batch size
+EFF = PER_DEV * NGPU * ACC
+TOTAL_STEPS = math.ceil(len(examples) / EFF) * EPOCHS
+WARMUP = max(1, int(0.03 * TOTAL_STEPS))                   # explicit steps: `warmup_ratio` was removed in newer transformers
+print(f'effective batch = {PER_DEV} x {NGPU} GPUs x {ACC} accumulation = {EFF} | {len(examples)} examples | {TOTAL_STEPS} steps | warmup {WARMUP}')
+
+arg_kw = dict(output_dir=f'{WORK}/math/run_{SLUG}', per_device_train_batch_size=PER_DEV,
+              gradient_accumulation_steps=ACC, num_train_epochs=EPOCHS, learning_rate=LR,
+              lr_scheduler_type='cosine', warmup_steps=WARMUP, fp16=True, logging_steps=20,
+              save_strategy='epoch', save_total_limit=1, report_to='none',
+              gradient_checkpointing=GC, remove_unused_columns=False,
+              group_by_length=True, dataloader_num_workers=2)
+supported = set(inspect.signature(TrainingArguments.__init__).parameters)
+skipped = [k for k in arg_kw if k not in supported]
+if skipped: print('this transformers version does not support, skipping:', skipped)
+args = TrainingArguments(**{k: v for k, v in arg_kw.items() if k in supported})
+
 class DS(torch.utils.data.Dataset):
     def __len__(self): return len(examples)
     def __getitem__(self, i): return examples[i]
@@ -388,6 +400,7 @@ trainer.train()
 OUT_DIR = f'{WORK}/math/{SLUG}-{"full" if FULL_FT else "lora"}'
 model.save_pretrained(OUT_DIR); tok.save_pretrained(OUT_DIR)     # full weights for FULL_FT, adapter for LoRA
 print('saved', OUT_DIR)
+
 
 
 # ==================== CELL 11  (7 · Evaluate AFTER and compare) ====================
