@@ -9,6 +9,7 @@ MMMLU_N = 1000     # same for MMMLU-Hindi
 GSM8K_N = 1319     # 1319 = the whole GSM8K test set
 RUN_CHAT_FORMAT = True      # also score the 0-shot chat-format variants (MMLU, MMMLU) as in the original notebook
 SEQ_LEN, MC_BS, GEN_BS, GEN_NEW = 1024, 16, 64, 256
+TOKENIZER_REPO = 'VishwamAI/vishwamai-base-v0'   # SentencePiece tokenizer.model used when a model repo does not contain one (fine-tuning did not change the vocabulary)
 
 import subprocess, sys, os, re, math, copy, random, concurrent.futures as cf
 subprocess.run([sys.executable, "-m", "pip", "-q", "install", "-U", "transformers", "datasets", "accelerate", "sentencepiece"], check=False)
@@ -138,22 +139,33 @@ hi_rows = hi_rows[:MMMLU_N] if MMMLU_N else hi_rows
 # ---- run every model ----
 results = {}
 for name in MODELS:
-    print(f'\n=== {name} ===', flush=True)
-    tkp = os.path.join(name, 'tokenizer.model') if os.path.isdir(name) else hf_hub_download(name, 'tokenizer.model', token=token)
-    sp = spm.SentencePieceProcessor(model_file=tkp)
-    try:    model = AutoModelForCausalLM.from_pretrained(name, dtype=torch.float32, token=token)
-    except TypeError: model = AutoModelForCausalLM.from_pretrained(name, torch_dtype=torch.float32, token=token)
-    model = model.to('cuda:0').eval()
-    reps = [model] + [copy.deepcopy(model).to(f'cuda:{g}').eval() for g in range(1, torch.cuda.device_count())]
-    r = {}
-    r['MMLU 5-shot (raw format)'] = eval_mc(reps, sp, mm_test, shots=mm_dev); print('MMLU raw done', flush=True)
-    r['MMMLU-Hindi 0-shot (raw)'] = eval_mc(reps, sp, hi_rows); print('MMMLU raw done', flush=True)
-    if RUN_CHAT_FORMAT:
-        r['MMLU 0-shot (chat format)'] = eval_mc(reps, sp, mm_test, chat=True); print('MMLU chat done', flush=True)
-        r['MMMLU-Hindi 0-shot (chat)'] = eval_mc(reps, sp, hi_rows, chat=True); print('MMMLU chat done', flush=True)
-    r['GSM8K greedy'] = eval_gsm8k(reps, sp, GSM8K_N); print('GSM8K done', flush=True)
-    results[name] = r
-    del reps, model; gc.collect(); torch.cuda.empty_cache()
+    try:
+        print(f'\n=== {name} ===', flush=True)
+        try:
+            tkp = os.path.join(name, 'tokenizer.model') if os.path.isdir(name) else hf_hub_download(name, 'tokenizer.model', token=token)
+            if not os.path.exists(tkp): raise FileNotFoundError(tkp)
+        except Exception:
+            print(f'  no tokenizer.model in {name}: using the one from {TOKENIZER_REPO}')
+            tkp = hf_hub_download(TOKENIZER_REPO, 'tokenizer.model', token=token)
+        sp = spm.SentencePieceProcessor(model_file=tkp)
+        try:    model = AutoModelForCausalLM.from_pretrained(name, dtype=torch.float32, token=token)
+        except TypeError: model = AutoModelForCausalLM.from_pretrained(name, torch_dtype=torch.float32, token=token)
+        model = model.to('cuda:0').eval()
+        reps = [model] + [copy.deepcopy(model).to(f'cuda:{g}').eval() for g in range(1, torch.cuda.device_count())]
+        r = {}
+        r['MMLU 5-shot (raw format)'] = eval_mc(reps, sp, mm_test, shots=mm_dev); print('MMLU raw done', flush=True)
+        r['MMMLU-Hindi 0-shot (raw)'] = eval_mc(reps, sp, hi_rows); print('MMMLU raw done', flush=True)
+        if RUN_CHAT_FORMAT:
+            r['MMLU 0-shot (chat format)'] = eval_mc(reps, sp, mm_test, chat=True); print('MMLU chat done', flush=True)
+            r['MMMLU-Hindi 0-shot (chat)'] = eval_mc(reps, sp, hi_rows, chat=True); print('MMMLU chat done', flush=True)
+        r['GSM8K greedy'] = eval_gsm8k(reps, sp, GSM8K_N); print('GSM8K done', flush=True)
+        results[name] = r
+        del reps, model; gc.collect(); torch.cuda.empty_cache()
+    except Exception as e:
+        print(f'!! {name} failed: {type(e).__name__}: {str(e)[:300]}', flush=True)
+        try: del reps, model
+        except NameError: pass
+        gc.collect(); torch.cuda.empty_cache()
 
 # ---- report ----
 print('\n' + '=' * 100)
