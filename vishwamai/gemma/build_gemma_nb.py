@@ -8,7 +8,7 @@ cells = [
 md('''# VishwamAI on Gemma 4 31B - QLoRA training (not pretraining)
 Starts from the open **google/gemma-4-31B** weights (Apache-2.0 per its model card) and trains a small LoRA adapter on top: software-engineering (SWE) skill, Hindi/Telugu, VishwamAI identity and the `<think>` style. Nothing is trained from scratch; the result is a *derived* model and must credit Gemma 4.
 
-**Hardware (read first).** The bf16 weights are 62.6 GB. In 4-bit they are roughly 17-20 GB, so this does **not** fit the free Colab T4 (15 GB). You need a 40-80 GB GPU: Colab **A100** (paid compute units), or a rented L40S/A100. A guard cell below stops early on a GPU that is too small instead of crashing 40 minutes in. You also need about 70 GB free disk for the download (Colab A100 has enough; Drive does not).
+**Hardware (read first).** The bf16 weights are 62.6 GB. In 4-bit they are roughly 17-20 GB: too big for ONE free T4 (15 GB), but they can be split across **Kaggle's 2 x T4** (Accelerator: GPU T4 x2, ~30 GB total), or fit one 40 GB+ GPU (A100 / L40S). With 2 x T4 the two cards work one after the other (not in parallel), so it is slow, and sequences are kept short. The download is ~63 GB and is deleted after loading; the guard cell checks the free disk and stops early if it is not enough (Kaggle `/kaggle/working` is small, so the cache goes to `/tmp` - if `/tmp` is also too small, use a Colab A100 session instead). T4s have no bf16, so the notebook trains in fp16 with a loss scaler.
 Rough cost (an estimate, check current prices): a few hours on an A100 / L40S. Use the time budget so it stops by itself.
 
 **Data.** Put your own SFT file at `MyDrive/vishwamai/gemma/sft.jsonl`, one JSON object per line: `{"messages": [{"role":"user","content":"..."},{"role":"assistant","content":"..."}]}`.
@@ -29,9 +29,11 @@ GDIR = f'{WORK}/gemma'; os.makedirs(GDIR, exist_ok=True)
 MODEL_ID = 'google/gemma-4-31B'            # base weights. Try 'google/gemma-4-E4B' first if you only have a small GPU.
 ADAPTER_DIR = f'{GDIR}/adapter'; SFT_FILE = f'{GDIR}/sft.jsonl'
 USE_SWE_SMITH_TRAJECTORIES = False          # see the warning above before turning this on
-MAX_LEN = 4096; LORA_R = 16; LORA_ALPHA = 32; LR = 1e-4
+MAX_LEN = 1536;      # T4s have 15 GB each: keep sequences short (raise on bigger GPUs)
+ LORA_R = 16; LORA_ALPHA = 32; LR = 1e-4
 TOPIC = 'mmlu'                              # today's topic, see TOPICS in the data cell
 MAX_EXAMPLES_PER_SOURCE = 20000
+CACHE_DIR = '/tmp/hf_cache'            # model download goes here and is deleted after loading (needs ~65 GB free)
 TIME_BUDGET_MIN = 180; BATCH_TOKENS_ACCUM = 16   # sequences per optimiser step (micro-batch is 1 sequence)
 '''),
 code('''
@@ -55,30 +57,39 @@ def get_hf_token(required=False):
 HF_TOKEN = get_hf_token()
 '''),
 code('''
-# Guard: refuse to start on a GPU / disk that cannot work
+# Guard: refuse to start on GPUs / disk that cannot work. Works for 1 big GPU or 2 x T4 (Kaggle: Accelerator -> GPU T4 x2).
 import torch
-assert torch.cuda.is_available(), 'No GPU: Runtime -> Change runtime type -> A100 (or L4/L40S).'
-gb = torch.cuda.get_device_properties(0).total_memory / 1e9
-free_disk = shutil.disk_usage('/').free / 1e9
-print(f'GPU {torch.cuda.get_device_name(0)} {gb:.0f} GB | free disk {free_disk:.0f} GB | bf16 {torch.cuda.is_bf16_supported()}')
+assert torch.cuda.is_available(), 'No GPU: enable one in the notebook settings.'
+n_gpu = torch.cuda.device_count(); gpus = [torch.cuda.get_device_properties(i) for i in range(n_gpu)]
+total_gb = sum(g.total_memory for g in gpus) / 1e9
+os.makedirs(CACHE_DIR, exist_ok=True); free_disk = shutil.disk_usage(CACHE_DIR).free / 1e9
+BF16 = torch.cuda.is_bf16_supported() and all(g.major >= 8 for g in gpus)
+print(f'{n_gpu} GPU(s): ' + ', '.join(f'{g.name} {g.total_memory/1e9:.0f} GB' for g in gpus) + f' | total {total_gb:.0f} GB | free disk at {CACHE_DIR}: {free_disk:.0f} GB | bf16 {BF16}')
 big = '31B' in MODEL_ID or '26B' in MODEL_ID
 if big:
-    assert gb >= 38, f'{MODEL_ID} in 4-bit needs a 40 GB+ GPU (this one has {gb:.0f} GB). Use an A100/L40S, or set MODEL_ID to a smaller Gemma 4.'
-    assert free_disk >= 75, f'need ~70 GB free disk for the download, have {free_disk:.0f} GB'
-'''),
+    assert total_gb >= 28, f'{MODEL_ID} in 4-bit needs about 20 GB for weights plus activations: use 2 x T4 or a 40 GB GPU (found {total_gb:.0f} GB total).'
+    assert free_disk >= 66, f'the download is ~63 GB and {CACHE_DIR} has {free_disk:.0f} GB free. Kaggle /kaggle/working is too small; try a different CACHE_DIR or a Colab A100 session.'
+''')
+,
 code('''
 from transformers import AutoTokenizer, BitsAndBytesConfig, AutoModelForCausalLM
-tok = AutoTokenizer.from_pretrained(MODEL_ID, token=HF_TOKEN)
+tok = AutoTokenizer.from_pretrained(MODEL_ID, token=HF_TOKEN, cache_dir=CACHE_DIR)
 bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type='nf4', bnb_4bit_use_double_quant=True,
-                         bnb_4bit_compute_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16)
-kw = dict(quantization_config=bnb, device_map={'': 0}, token=HF_TOKEN, torch_dtype=torch.bfloat16)
+                         bnb_4bit_compute_dtype=torch.bfloat16 if BF16 else torch.float16)
+DT = torch.bfloat16 if BF16 else torch.float16
+max_mem = {i: f'{int(g.total_memory/2**30) - 2}GiB' for i, g in enumerate(gpus)}     # leave ~2 GB per GPU for activations
+max_mem['cpu'] = '24GiB'
+kw = dict(quantization_config=bnb, device_map='auto', max_memory=max_mem, token=HF_TOKEN, torch_dtype=DT, cache_dir=CACHE_DIR)
 try:
     model = AutoModelForCausalLM.from_pretrained(MODEL_ID, **kw)
 except Exception as e:
     print('AutoModelForCausalLM failed:', type(e).__name__, str(e)[:200], '\\n-> trying AutoModelForImageTextToText')
     from transformers import AutoModelForImageTextToText
     model = AutoModelForImageTextToText.from_pretrained(MODEL_ID, **kw)
-print(type(model).__name__, f'| GPU memory used {torch.cuda.memory_allocated()/1e9:.1f} GB')
+print(type(model).__name__, '| GPU memory used (GB):', [round(torch.cuda.memory_allocated(i)/1e9, 1) for i in range(n_gpu)])
+print('devices:', sorted({str(v) for v in getattr(model, 'hf_device_map', {}).values()}))
+shutil.rmtree(CACHE_DIR, ignore_errors=True)     # frees ~63 GB; the weights now live in GPU memory
+print('download cache removed; free disk now', round(shutil.disk_usage('/').free/1e9), 'GB')
 '''),
 code('''
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, PeftModel
@@ -89,7 +100,7 @@ targets = [n for n, m in model.named_modules()
            if isinstance(m, bnb_lib.nn.Linear4bit) and n.endswith(SUFFIX) and not any(x in n for x in ('vision', 'audio', 'visual'))]
 print(len(targets), 'LoRA target modules, e.g.', targets[:2])
 assert targets, 'no target modules found - print model.named_modules() and adjust SUFFIX'
-model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+model.gradient_checkpointing_enable(); model.enable_input_require_grads(); model.config.use_cache = False   # (not prepare_model_for_kbit_training: it would upcast the big embedding table to fp32)
 if os.path.exists(f'{ADAPTER_DIR}/adapter_config.json'):
     model = PeftModel.from_pretrained(model, ADAPTER_DIR, is_trainable=True); print('resumed adapter from', ADAPTER_DIR)
 else:
@@ -159,6 +170,7 @@ steps_total = max(1, len(enc) // BATCH_TOKENS_ACCUM)
 sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min(1.0, (s + 1) / 10) * (0.1 + 0.9 * 0.5 * (1 + math.cos(math.pi * min(1.0, s / steps_total)))))
 state_f = f'{GDIR}/train_state.json'
 st = json.load(open(state_f)) if os.path.exists(state_f) else dict(step=0)
+scaler = torch.amp.GradScaler('cuda', enabled=not BF16)
 model.train(); t0 = time.time(); last_save = t0; step = st['step']
 def save():
     model.save_pretrained(ADAPTER_DIR); json.dump(dict(step=step), open(state_f, 'w'))
@@ -167,13 +179,14 @@ try:
         loss_sum = 0.0
         for i in range(BATCH_TOKENS_ACCUM):
             ex = enc[(step * BATCH_TOKENS_ACCUM + i) % len(enc)]
-            ids = torch.tensor([ex['input_ids']], device='cuda'); lab = torch.tensor([ex['labels']], device='cuda')
-            loss = model(input_ids=ids, labels=lab).loss / BATCH_TOKENS_ACCUM
+            ids = torch.tensor([ex['input_ids']], device='cuda:0'); lab = torch.tensor([ex['labels']], device='cuda:0')
+            with torch.autocast('cuda', dtype=DT):
+                loss = model(input_ids=ids, labels=lab).loss / BATCH_TOKENS_ACCUM
             assert torch.isfinite(loss), 'loss is not finite - lower LR'
-            loss.backward(); loss_sum += loss.item()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0); opt.step(); sched.step(); opt.zero_grad(set_to_none=True); step += 1
+            scaler.scale(loss).backward(); loss_sum += loss.item()
+        scaler.unscale_(opt); torch.nn.utils.clip_grad_norm_([p for p in model.parameters() if p.requires_grad], 1.0); scaler.step(opt); scaler.update(); sched.step(); opt.zero_grad(set_to_none=True); step += 1
         if step % 5 == 0 or step == 1:
-            print(f'step {step}/{steps_total} loss {loss_sum:.4f} lr {sched.get_last_lr()[0]:.2e} | {(time.time()-t0)/60:.0f}/{TIME_BUDGET_MIN} min | mem {torch.cuda.max_memory_allocated()/1e9:.0f} GB')
+            print(f'step {step}/{steps_total} loss {loss_sum:.4f} lr {sched.get_last_lr()[0]:.2e} | {(time.time()-t0)/60:.0f}/{TIME_BUDGET_MIN} min | peak mem {[round(torch.cuda.max_memory_allocated(i)/1e9) for i in range(n_gpu)]} GB')
         if time.time() - last_save > 600: save(); last_save = time.time(); print('  adapter saved')
 except KeyboardInterrupt:
     print('interrupted - saving'); save(); raise
