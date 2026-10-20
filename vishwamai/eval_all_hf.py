@@ -18,6 +18,16 @@ from datasets import load_dataset
 from huggingface_hub import hf_hub_download
 from transformers import AutoModelForCausalLM
 
+# ---- free GPU memory left over from an earlier failed cell in this session, and refuse to continue if it is still occupied ----
+import gc
+for _n in ('last_traceback', 'last_value', 'last_type'): setattr(sys, _n, None)      # a failed cell keeps its tensors alive through the traceback
+gc.collect(); torch.cuda.empty_cache()
+_used = [torch.cuda.memory_allocated(g) / 2**30 for g in range(torch.cuda.device_count())]
+if max(_used) > 1.0:
+    raise RuntimeError(f"GPU memory is already in use by an earlier cell in this session ({[round(u, 1) for u in _used]} GiB). "
+                       "Restart the session (Run > Restart session), then run only this cell.")
+print('GPUs:', torch.cuda.device_count(), '| memory in use at start (GiB):', [round(u, 2) for u in _used])
+
 # ---- Hugging Face token: environment / Kaggle or Colab secret / saved login / typed (hidden) ----
 token = os.environ.get('HF_TOKEN')
 if not token:
@@ -143,7 +153,7 @@ for name in MODELS:
         r['MMMLU-Hindi 0-shot (chat)'] = eval_mc(reps, sp, hi_rows, chat=True); print('MMMLU chat done', flush=True)
     r['GSM8K greedy'] = eval_gsm8k(reps, sp, GSM8K_N); print('GSM8K done', flush=True)
     results[name] = r
-    del reps, model; torch.cuda.empty_cache()
+    del reps, model; gc.collect(); torch.cuda.empty_cache()
 
 # ---- report ----
 print('\n' + '=' * 100)
