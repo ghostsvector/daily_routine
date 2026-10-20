@@ -28,6 +28,7 @@ SLUG = STUDENT.split('/')[-1]
 MAX_LEN, N_EVAL, SEED = 768, 300, 0
 MATH_SUFFIX = "\n\nEnd your reply with a final line '#### <number>'."
 random.seed(SEED); np.random.seed(SEED); torch.manual_seed(SEED)
+SKIP_TEACHER = True    # True: skip the hours-long teacher generation (section 4) and train on the human GSM8K solutions only
 
 # ---------------- Hugging Face token ----------------
 # Looks in: environment -> Kaggle Secrets / Colab Secrets (HF_TOKEN or hf_token) -> a saved login -> asks you to type one (interactive only).
@@ -281,18 +282,23 @@ if __name__ == '__main__':
 
 
 # ==================== CELL 7  (4 · Teacher data (open models, run locally)) ====================
-N_PROMPTS = 3000          # start small on a T4; raise on a bigger GPU
-os.makedirs(f'{WORK}/math', exist_ok=True)
-rows = [dict(prompt=q + MATH_SUFFIX, lang='en', answer=gold(a))
-        for q, a in zip(gtr['question'][:N_PROMPTS], gtr['answer'][:N_PROMPTS]) if not contaminated(q)]
-with open(f'{WORK}/math/prompts.jsonl', 'w', encoding='utf-8') as f:
-    for r in rows: f.write(json.dumps(r, ensure_ascii=False) + '\n')
-print(len(rows), 'prompts')
+if SKIP_TEACHER:
+    print('teacher prompts skipped (SKIP_TEACHER = True)')
+else:
+    N_PROMPTS = 3000          # start small on a T4; raise on a bigger GPU
+    os.makedirs(f'{WORK}/math', exist_ok=True)
+    rows = [dict(prompt=q + MATH_SUFFIX, lang='en', answer=gold(a))
+            for q, a in zip(gtr['question'][:N_PROMPTS], gtr['answer'][:N_PROMPTS]) if not contaminated(q)]
+    with open(f'{WORK}/math/prompts.jsonl', 'w', encoding='utf-8') as f:
+        for r in rows: f.write(json.dumps(r, ensure_ascii=False) + '\n')
+    print(len(rows), 'prompts')
+
 
 
 # ==================== CELL 8  (4 · Teacher data (open models, run locally)) ====================
-%%bash -s "$WORK"
-WORK=$1
+%%bash -s "$WORK" "$SKIP_TEACHER"
+WORK=$1; SKIP=$2
+if [ "$SKIP" = "True" ]; then echo "teacher generation skipped (SKIP_TEACHER = True)"; exit 0; fi
 PER_GPU=700        # prompts per GPU (raise for more data)
 MAXMIN=75          # hard time limit per GPU in minutes; finished batches are kept, re-running resumes
 BATCH=48           # lower to 32 if a log shows an out-of-memory error
