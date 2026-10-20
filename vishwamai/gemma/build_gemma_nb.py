@@ -29,7 +29,8 @@ GDIR = f'{WORK}/gemma'; os.makedirs(GDIR, exist_ok=True)
 MODEL_ID = 'google/gemma-4-31B'            # base weights. Try 'google/gemma-4-E4B' first if you only have a small GPU.
 ADAPTER_DIR = f'{GDIR}/adapter'; SFT_FILE = f'{GDIR}/sft.jsonl'
 USE_SWE_SMITH_TRAJECTORIES = False          # see the warning above before turning this on
-MAX_LEN = 1536;      # T4s have 15 GB each: keep sequences short (raise on bigger GPUs)
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'    # must be set before torch touches the GPU (restart the session after changing)
+MAX_LEN = 512;      # T4s have 15 GB each: keep sequences short (raise on bigger GPUs)
 LORA_R = 16; LORA_ALPHA = 32; LR = 1e-4
 TOPIC = 'mmlu'                              # today's topic, see TOPICS in the data cell
 MAX_EXAMPLES_PER_SOURCE = 20000
@@ -77,7 +78,8 @@ tok = AutoTokenizer.from_pretrained(MODEL_ID, token=HF_TOKEN, cache_dir=CACHE_DI
 bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type='nf4', bnb_4bit_use_double_quant=True,
                          bnb_4bit_compute_dtype=torch.bfloat16 if BF16 else torch.float16)
 DT = torch.bfloat16 if BF16 else torch.float16
-max_mem = {i: f'{int(g.total_memory/2**30) - 2}GiB' for i, g in enumerate(gpus)}     # leave ~2 GB per GPU for activations
+# GPU 0 also holds the embedding / output layer, whose logits are huge (262k vocabulary): give it fewer layers than the others
+max_mem = {i: f'{int(g.total_memory/2**30) - (7 if (i == 0 and n_gpu > 1) else 2)}GiB' for i, g in enumerate(gpus)}
 max_mem['cpu'] = '24GiB'
 kw = dict(quantization_config=bnb, device_map='auto', max_memory=max_mem, token=HF_TOKEN, torch_dtype=DT, cache_dir=CACHE_DIR)
 try:
@@ -196,6 +198,16 @@ steps_total = max(1, len(enc) // BATCH_TOKENS_ACCUM)
 sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min(1.0, (s + 1) / 10) * (0.1 + 0.9 * 0.5 * (1 + math.cos(math.pi * min(1.0, s / steps_total)))))
 state_f = f'{GDIR}/train_state.json'
 st = json.load(open(state_f)) if os.path.exists(state_f) else dict(step=0)
+def answer_loss(ids, lab):
+    """cross-entropy on the answer tokens only; asks the model for logits of just the last k positions, so the 262k-vocab logits
+    for the whole prompt are never built (this is what ran out of memory)."""
+    k = int((lab[0] != -100).sum().item()) + 1
+    try:
+        logits = model(input_ids=ids, logits_to_keep=k).logits[:, :-1].float()
+    except TypeError:                                              # model forward without logits_to_keep: full logits (needs a short MAX_LEN)
+        logits = model(input_ids=ids).logits[:, -k:-1].float()
+    tgt = lab[:, -(k - 1):].to(logits.device)
+    return torch.nn.functional.cross_entropy(logits.reshape(-1, logits.size(-1)), tgt.reshape(-1), ignore_index=-100)
 scaler = torch.amp.GradScaler('cuda', enabled=not BF16)
 model.train(); t0 = time.time(); last_save = t0; step = st['step']
 def save():
@@ -207,7 +219,7 @@ try:
             ex = enc[(step * BATCH_TOKENS_ACCUM + i) % len(enc)]
             ids = torch.tensor([ex['input_ids']], device='cuda:0'); lab = torch.tensor([ex['labels']], device='cuda:0')
             with torch.autocast('cuda', dtype=DT):
-                loss = model(input_ids=ids, labels=lab).loss / BATCH_TOKENS_ACCUM
+                loss = answer_loss(ids, lab) / BATCH_TOKENS_ACCUM
             assert torch.isfinite(loss), 'loss is not finite - lower LR'
             scaler.scale(loss).backward(); loss_sum += loss.item()
         scaler.unscale_(opt); torch.nn.utils.clip_grad_norm_([p for p in model.parameters() if p.requires_grad], 1.0); scaler.step(opt); scaler.update(); sched.step(); opt.zero_grad(set_to_none=True); step += 1
