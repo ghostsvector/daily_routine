@@ -456,28 +456,38 @@ for k, v in R.items():
 
 
 # ==================== CELL 12  (8 · Publish (optional, private by default)) ====================
-from huggingface_hub import notebook_login, HfApi
-LICENSE, PRIVATE = None, True
-REPO_NAME = f'{SLUG}-math-v0'
-assert LICENSE, 'set LICENSE (compatible with STUDENT and the teachers) before uploading'
-if not os.environ.get('HF_TOKEN'): notebook_login()
-api = HfApi(); repo = f"{api.whoami()['name']}/{REPO_NAME}"
-kind = 'Full fine-tune of the from-scratch VishwamAI base' if FULL_FT else f'LoRA adapter for **{STUDENT}** (not the from-scratch VishwamAI model)'
-card = f'''---
+from huggingface_hub import HfApi
+
+# Choose the licence yourself. 'other' is a neutral placeholder for a PRIVATE experiment; decide properly before making it public
+# (the base model's pre-training data and GSM8K (MIT) each have their own terms, and any teacher model used has its own licence).
+LICENSE = 'other'
+PRIVATE = True
+REPO_NAME = f'{SLUG}-gsm8k-sft-v0'
+
+assert os.environ.get('HF_TOKEN'), 'no Hugging Face token in this session: run the setup cell / paste a token with WRITE access'
+api = HfApi(token=os.environ['HF_TOKEN'])
+repo = f"{api.whoami()['name']}/{REPO_NAME}"
+
+n_t = globals().get('n_teacher', 0)                       # teacher rows that went into training (0 if generation was skipped)
+data_line = ("human-written GSM8K train solutions only (no teacher-model data was used)" if not n_t else
+             f"human-written GSM8K train solutions plus {n_t} solutions from DeepSeek-R1-Distill-Qwen-7B filtered for correct final answers")
+kind = ('Full fine-tune of the from-scratch VishwamAI base' if FULL_FT else f'LoRA adapter for {STUDENT}')
+card = f"""---
 license: {LICENSE}
 base_model: {STUDENT}
-tags: [math, gsm8k, distillation]
+tags: [math, gsm8k, experimental]
 ---
 # {REPO_NAME}
 
-{kind}, trained on GSM8K-train human solutions plus
-solutions from DeepSeek-R1-Distill-Qwen-7B filtered for correct final answers. Training questions were checked for
-8-gram overlap with the GSM8K test set.
+{kind} (`{STUDENT}`), trained on {data_line}: {len(examples)} examples. GSM8K training questions were checked for
+8-gram overlap with the GSM8K test set and overlapping ones were removed.
 
 GSM8K greedy accuracy on {N_EVAL} test questions: {100 * base_acc:.1f}% before, {100 * after_acc:.1f}% after
-(about +-3 points of noise). Any score is largely the base model's own ability; see its card for its terms.
-'''
-open(f'{OUT_DIR}/README.md', 'w').write(card)
+(about +-3 points of noise at this sample size). This is an experimental small model with very limited math ability.
+"""
+open(f'{OUT_DIR}/README.md', 'w', encoding='utf-8').write(card)
+print(card)
 api.create_repo(repo, private=PRIVATE, exist_ok=True)
 api.upload_folder(folder_path=OUT_DIR, repo_id=repo, commit_message='Upload fine-tuned model')
-print('https://huggingface.co/' + repo)
+print('https://huggingface.co/' + repo, '(private)' if PRIVATE else '(public)')
+
