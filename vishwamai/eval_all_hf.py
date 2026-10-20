@@ -36,6 +36,7 @@ if not token:
     except Exception: pass
 if not token:
     import getpass; token = getpass.getpass('Hugging Face token (hidden, empty for public repos): ').strip() or None
+if token: os.environ['HF_TOKEN'] = token                   # so datasets / hub downloads are authenticated too
 
 # ---- helpers ----
 def wilson(k, n, z=1.96):
@@ -81,6 +82,7 @@ def eval_mc(reps, sp, rows, shots=(), chat=False, L=SEQ_LEN, bs=MC_BS):
         items.append((ids[-L:], a))
     items.sort(key=lambda x: len(x[0]))                     # similar lengths together = less padding
     batches = [items[i:i + bs] for i in range(0, len(items), bs)]
+    @torch.no_grad()                                        # grad mode is per-thread: the worker threads need it themselves
     def work(rep, mine):
         dev = next(rep.parameters()).device; ok = 0
         for b in mine:
@@ -100,6 +102,7 @@ def eval_gsm8k(reps, sp, n, bs=GEN_BS, max_new=GEN_NEW):
     qs, ans = test['question'][:n], [gold(a) for a in test['answer'][:n]]
     BOS, EOS = [sp.eos_id()], sp.eos_id()
     batches = [(qs[i:i + bs], ans[i:i + bs]) for i in range(0, len(qs), bs)]
+    @torch.no_grad()                                        # grad mode is per-thread: the worker threads need it themselves
     def work(rep, mine):
         dev = next(rep.parameters()).device; ok = 0
         for qb, ab in mine:
