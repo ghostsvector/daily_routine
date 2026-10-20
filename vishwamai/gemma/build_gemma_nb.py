@@ -120,8 +120,8 @@ if USE_SWE_SMITH_TRAJECTORIES:
         if isinstance(ex.get('messages'), list): rows.append({'messages': ex['messages']})
 # ---- daily topic curriculum: TRAIN-split data only. Benchmark TEST sets are never trained on (that would be contamination).
 TOPICS = {   # topic -> candidate (hf id, config, split); each is tried and skipped with a message if it does not load. IDs are unverified candidates.
-  'mmlu':        [('cais/mmlu', 'auxiliary_train', 'train')],
-  'mmlu_pro':    [('cais/mmlu', 'auxiliary_train', 'train'), ('TIGER-Lab/WebInstructSub', None, 'train')],
+  'mmlu':        [('cais/mmlu', 'auxiliary_train', 'train'), ('cais/mmlu', 'all', 'auxiliary_train'), ('allenai/ai2_arc', 'ARC-Challenge', 'train'), ('allenai/ai2_arc', 'ARC-Easy', 'train')],
+  'mmlu_pro':    [('cais/mmlu', 'auxiliary_train', 'train'), ('cais/mmlu', 'all', 'auxiliary_train'), ('TIGER-Lab/WebInstructSub', None, 'train')],
   'aime_math':   [('AI-MO/NuminaMath-CoT', None, 'train'), ('open-r1/OpenR1-Math-220k', 'default', 'train')],
   'code_contest':[('open-r1/codeforces-cots', 'solutions', 'train'), ('open-r1/codeforces', None, 'train')],
   'tool_use':    [('Salesforce/xlam-function-calling-60k', None, 'train')],
@@ -131,6 +131,12 @@ PAIRS = [('question', 'answer'), ('problem', 'solution'), ('prompt', 'response')
 def to_messages(ex):
     for k in ('messages', 'conversations'):
         if isinstance(ex.get(k), list) and ex[k] and 'role' in ex[k][0]: return ex[k]
+    if isinstance(ex.get('choices'), dict) and ex.get('answerKey') and ex.get('question'):          # ARC style
+        t, lab = ex['choices']['text'], ex['choices']['label']
+        if ex['answerKey'] in lab:
+            opts = '\\n'.join(f'{"ABCDE"[i]}. {c}' for i, c in enumerate(t[:5]))
+            return [{'role': 'user', 'content': f"{ex['question']}\\n{opts}\\nAnswer with the letter."}, {'role': 'assistant', 'content': "ABCDE"[lab.index(ex['answerKey'])]}]
+        return None
     for q, a in PAIRS:
         if ex.get(q) and ex.get(a):
             if q == 'question' and isinstance(ex.get('choices'), list):     # MMLU-style multiple choice
@@ -150,8 +156,9 @@ for path, cfg, split in TOPICS.get(TOPIC, []):
             if n >= MAX_EXAMPLES_PER_SOURCE: break
         print(f'topic {TOPIC}: {path}: {n} examples' + ('' if n else '  (no usable columns - check the schema)'))
     except Exception as e:
-        print(f'topic {TOPIC}: {path} skipped: {type(e).__name__}: {str(e)[:100]}')
-assert rows, f'no training data: create {SFT_FILE} (one {{"messages": [...]}} per line)'
+        print(f'topic {TOPIC}: {path} [{cfg}/{split}] SKIPPED: {type(e).__name__}: {str(e)[:300]}')
+assert rows, ('no training data. Read the "topic ... SKIPPED" lines printed just above this error: they say why each dataset failed '
+              f'(no internet in the notebook? dataset id wrong?). Or create {SFT_FILE} with one {{"messages": [...]}} per line.')
 random.Random(0).shuffle(rows)
 def encode(ex):
     msgs = ex['messages']; last = max(i for i, m in enumerate(msgs) if m['role'] == 'assistant')
