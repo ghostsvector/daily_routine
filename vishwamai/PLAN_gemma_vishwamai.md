@@ -45,7 +45,7 @@ MATH-Vision, OmniDocBench, MedXPertQA-MM, CoVoST, FLEURS (vision/audio), MRCR 12
 ## Order and rough effort
 | Phase | Hardware | Status |
 |---|---|---|
-| 0 baselines | 2xT4 | not started |
+| 0 baselines | 2xT4 | started: 132M base model measured (MMLU/MMMLU at chance, GSM8K 1.1% -> 2.5% after SFT); plain Gemma 4 baseline not yet run |
 | 1 knowledge (MMLU) | 2xT4 | running (`mmlu` topic) |
 | 2 math/code | 2xT4 | notebook ready, untested |
 | 3 tool use | 2xT4 | notebook ready, untested |
