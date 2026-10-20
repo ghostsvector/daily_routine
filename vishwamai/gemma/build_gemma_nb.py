@@ -209,9 +209,10 @@ def answer_loss(ids, lab):
     tgt = lab[:, -(k - 1):].to(logits.device)
     return torch.nn.functional.cross_entropy(logits.reshape(-1, logits.size(-1)), tgt.reshape(-1), ignore_index=-100)
 scaler = torch.amp.GradScaler('cuda', enabled=not BF16)
-model.train(); t0 = time.time(); last_save = t0; step = st['step']
+step = st['step'] if st.get('topic') == TOPIC else 0      # a new topic starts at step 0 but keeps the adapter learned so far
+model.train(); t0 = time.time(); last_save = t0
 def save():
-    model.save_pretrained(ADAPTER_DIR); json.dump(dict(step=step), open(state_f, 'w'))
+    model.save_pretrained(ADAPTER_DIR); json.dump(dict(step=step, topic=TOPIC), open(state_f, 'w'))
 try:
     while step < steps_total and time.time() - t0 < TIME_BUDGET_MIN * 60:
         loss_sum = 0.0
