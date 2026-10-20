@@ -1,4 +1,4 @@
-"""Builds vishwamai_gemma31b_swe_qlora.ipynb (self-contained). python3 build_gemma_nb.py"""
+"""Builds vishwamai_gemma31b_topics_qlora.ipynb (self-contained). python3 build_gemma_nb.py"""
 import json, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 def md(s): return dict(cell_type='markdown', metadata={}, source=s.strip('\n').splitlines(True))
@@ -30,6 +30,8 @@ MODEL_ID = 'google/gemma-4-31B'            # base weights. Try 'google/gemma-4-E
 ADAPTER_DIR = f'{GDIR}/adapter'; SFT_FILE = f'{GDIR}/sft.jsonl'
 USE_SWE_SMITH_TRAJECTORIES = False          # see the warning above before turning this on
 MAX_LEN = 4096; LORA_R = 16; LORA_ALPHA = 32; LR = 1e-4
+TOPIC = 'mmlu'                              # today's topic, see TOPICS in the data cell
+MAX_EXAMPLES_PER_SOURCE = 20000
 TIME_BUDGET_MIN = 180; BATCH_TOKENS_ACCUM = 16   # sequences per optimiser step (micro-batch is 1 sequence)
 '''),
 code('''
@@ -105,6 +107,39 @@ if USE_SWE_SMITH_TRAJECTORIES:
     print('SWE-smith columns:', ds.column_names)
     for ex in ds:
         if isinstance(ex.get('messages'), list): rows.append({'messages': ex['messages']})
+# ---- daily topic curriculum: TRAIN-split data only. Benchmark TEST sets are never trained on (that would be contamination).
+TOPICS = {   # topic -> candidate (hf id, config, split); each is tried and skipped with a message if it does not load. IDs are unverified candidates.
+  'mmlu':        [('cais/mmlu', 'auxiliary_train', 'train')],
+  'mmlu_pro':    [('cais/mmlu', 'auxiliary_train', 'train'), ('TIGER-Lab/WebInstructSub', None, 'train')],
+  'aime_math':   [('AI-MO/NuminaMath-CoT', None, 'train'), ('open-r1/OpenR1-Math-220k', 'default', 'train')],
+  'code_contest':[('open-r1/codeforces-cots', 'solutions', 'train'), ('open-r1/codeforces', None, 'train')],
+  'tool_use':    [('Salesforce/xlam-function-calling-60k', None, 'train')],
+  'science':     [],     # GPQA/HLE have no public train set - supply your own sft.jsonl for this topic
+}
+PAIRS = [('question', 'answer'), ('problem', 'solution'), ('prompt', 'response'), ('instruction', 'output'), ('query', 'answers')]
+def to_messages(ex):
+    for k in ('messages', 'conversations'):
+        if isinstance(ex.get(k), list) and ex[k] and 'role' in ex[k][0]: return ex[k]
+    for q, a in PAIRS:
+        if ex.get(q) and ex.get(a):
+            if q == 'question' and isinstance(ex.get('choices'), list):     # MMLU-style multiple choice
+                opts = '\n'.join(f'{"ABCD"[i]}. {c}' for i, c in enumerate(ex['choices'][:4])); ai = ex['answer'] if isinstance(ex['answer'], int) else None
+                if ai is None: return None
+                return [{'role': 'user', 'content': f"{ex['question']}\n{opts}\nAnswer with the letter."}, {'role': 'assistant', 'content': "ABCD"[ai]}]
+            return [{'role': 'user', 'content': str(ex[q])}, {'role': 'assistant', 'content': str(ex[a] if not isinstance(ex[a], list) else ex[a][0])}]
+    return None
+from datasets import load_dataset
+for path, cfg, split in TOPICS.get(TOPIC, []):
+    try:
+        ds = load_dataset(path, cfg, split=split, streaming=True, token=HF_TOKEN) if cfg else load_dataset(path, split=split, streaming=True, token=HF_TOKEN)
+        n = 0
+        for ex in ds:
+            m = to_messages(ex)
+            if m: rows.append({'messages': m}); n += 1
+            if n >= MAX_EXAMPLES_PER_SOURCE: break
+        print(f'topic {TOPIC}: {path}: {n} examples' + ('' if n else '  (no usable columns - check the schema)'))
+    except Exception as e:
+        print(f'topic {TOPIC}: {path} skipped: {type(e).__name__}: {str(e)[:100]}')
 assert rows, f'no training data: create {SFT_FILE} (one {{"messages": [...]}} per line)'
 random.Random(0).shuffle(rows)
 def encode(ex):
@@ -164,6 +199,16 @@ else:
     print('no heldout.jsonl: skipped. Create one to compare base vs tuned.')
 '''),
 code('''
+# Real benchmark scores for today's topic with lm-evaluation-harness (held-out TEST sets; run for base and tuned and compare).
+# Which tasks: mmlu -> mmlu ; mmlu_pro -> mmlu_pro ; science -> gpqa_main_zeroshot. Others (AIME, LiveCodeBench, Codeforces, tau2, HLE, vision/audio) need their own harnesses.
+RUN_LM_EVAL = False; LM_TASKS = 'mmlu_pro'; LM_LIMIT = 200      # limit = examples per task; small limit = wide error bars
+if RUN_LM_EVAL:
+    model.save_pretrained(ADAPTER_DIR)
+    os.system('pip -q install lm_eval')
+    for tag, extra in (('base', ''), ('tuned', f',peft={ADAPTER_DIR}')):
+        os.system(f"lm_eval --model hf --model_args pretrained={MODEL_ID},load_in_4bit=True,dtype=bfloat16{extra} --tasks {LM_TASKS} --limit {LM_LIMIT} --batch_size 1 --output_path {GDIR}/lm_eval_{tag}")
+'''),
+code('''
 # Publish the adapter (small, private by default). Merging into full 62 GB weights is a separate step on a big-RAM machine.
 REPO = 'VishwamAI/vishwamai-gemma4-31b-lora-v0'; PRIVATE = True; LICENSE = 'apache-2.0'   # adapter inherits Gemma 4's license; confirm on the model card
 from huggingface_hub import HfApi
@@ -184,6 +229,6 @@ api.upload_folder(folder_path=ADAPTER_DIR, repo_id=REPO, commit_message='LoRA ad
 print('uploaded', REPO)
 '''),
 ]
-path = f'{HERE}/vishwamai_gemma31b_swe_qlora.ipynb'
+path = f'{HERE}/vishwamai_gemma31b_topics_qlora.ipynb'
 json.dump(dict(cells=cells, metadata=dict(kernelspec=dict(name='python3', display_name='Python 3'), accelerator='GPU', colab=dict(gpuType='A100')), nbformat=4, nbformat_minor=5), open(path, 'w'), indent=1)
 print('wrote', path)
