@@ -330,8 +330,11 @@ true
 
 
 # ==================== CELL 9  (5 · Build the SFT set (verified teacher solutions + GSM8K human solutions)) ====================
+import os, json, re, glob, random
+import torch
+
 # --- preflight: stop early with a clear message instead of a NameError ---
-_missing = [n for n in ('tok', 'gtr', 'gte', 'encode_prompt', 'make_prompt', 'MATH_SUFFIX', 'WORK', 'contaminated', 'FULL_FT') if n not in globals()]
+_missing = [n for n in ('tok', 'gtr', 'gte', 'encode_prompt', 'make_prompt', 'MATH_SUFFIX', 'WORK', 'contaminated', 'FULL_FT', 'MAX_LEN') if n not in globals()]
 if _missing:
     raise RuntimeError("Not defined yet: " + ", ".join(_missing) + ". This session was probably restarted. Run these cells first, in order: "
                        "1) pip install  2) setup (token)  3) GSM8K data and helpers  4) load the student  5) build the SFT set"
