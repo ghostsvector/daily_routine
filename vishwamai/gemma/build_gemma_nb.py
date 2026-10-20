@@ -169,6 +169,16 @@ for path, cfg, split in TOPICS.get(TOPIC, []):
 assert rows, ('no training data. Read the "topic ... SKIPPED" lines printed just above this error: they say why each dataset failed '
               f'(no internet in the notebook? dataset id wrong?). Or create {SFT_FILE} with one {{"messages": [...]}} per line.')
 random.Random(0).shuffle(rows)
+# The base model's tokenizer ships no chat template: borrow the -it model's template (same vocabulary), else use a simple one.
+if not getattr(tok, 'chat_template', None):
+    try:
+        tok.chat_template = AutoTokenizer.from_pretrained(MODEL_ID + '-it', token=HF_TOKEN, cache_dir=CACHE_DIR).chat_template
+        print('chat template taken from', MODEL_ID + '-it')
+    except Exception as e:
+        print('could not load the -it template (' + type(e).__name__ + '); using a simple Gemma-style template')
+        tok.chat_template = ("{{ bos_token }}{% for m in messages %}<start_of_turn>{{ 'model' if m['role'] == 'assistant' else m['role'] }}\\n"
+                             "{{ m['content'] }}<end_of_turn>\\n{% endfor %}{% if add_generation_prompt %}<start_of_turn>model\\n{% endif %}")
+print('--- sample prompt as the model will see it ---'); print(tok.apply_chat_template(rows[0]['messages'][:1], tokenize=False, add_generation_prompt=True)[:400])
 def encode(ex):
     msgs = ex['messages']; last = max(i for i, m in enumerate(msgs) if m['role'] == 'assistant')
     prompt = tok.apply_chat_template(msgs[:last], tokenize=False, add_generation_prompt=True)
