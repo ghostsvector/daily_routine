@@ -33,6 +33,7 @@ def wilson(k, n, z=1.96):
 def gold(a): return a.split('####')[-1].strip().replace(',', '')
 def to_num(s):
     s = (s or '').replace('{,}', '')                                   # LaTeX thousands separator: 1{,}234
+    if '\\frac' in s or '/' in s: return None                            # fractions are not numeric answers here (GSM8K gold answers are plain numbers)
     s = re.sub(r'\\text\{[^}]*\}|\\[,!;: ]|\\%|[\$,%\s{}]', '', s)    # \text{..}, spacing macros, $, commas, %, braces
     m = re.findall(r'-?\d+\.?\d*', s)
     return m[-1] if m else None
