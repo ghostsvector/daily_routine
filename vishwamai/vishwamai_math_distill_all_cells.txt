@@ -298,7 +298,9 @@ else:
 # ==================== CELL 8  (4 · Teacher data (open models, run locally)) ====================
 %%bash -s "$WORK" "$SKIP_TEACHER"
 WORK=$1; SKIP=$2
-if [ "$SKIP" = "True" ]; then echo "teacher generation skipped (SKIP_TEACHER = True)"; exit 0; fi
+if [ "$SKIP" != "False" ]; then echo "teacher generation skipped (SKIP_TEACHER is not False; value seen: '$SKIP')"; exit 0; fi
+if [ ! -f "$WORK/math/prompts.jsonl" ]; then echo "ERROR: $WORK/math/prompts.jsonl is missing - run the prompts cell above first (with SKIP_TEACHER = False)"; exit 1; fi
+if [ ! -f distill_generate.py ]; then echo "ERROR: distill_generate.py is missing - run the %%writefile cell above first"; exit 1; fi
 PER_GPU=700        # prompts per GPU (raise for more data)
 MAXMIN=75          # hard time limit per GPU in minutes; finished batches are kept, re-running resumes
 BATCH=48           # lower to 32 if a log shows an out-of-memory error
@@ -323,6 +325,8 @@ wait $PA; SA=$?; wait $PB; SB=$?
 echo "FINISHED. exit codes: A=$SA B=$SB   (0 = done, 124 = hit the time limit, other = error, see the logs below)"
 wc -l $A $B
 tail -n 2 $WORK/math/gen_a.log $WORK/math/gen_b.log
+true
+
 
 
 # ==================== CELL 9  (5 · Build the SFT set (verified teacher solutions + GSM8K human solutions)) ====================
