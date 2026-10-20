@@ -146,9 +146,18 @@ def to_messages(ex):
             return [{'role': 'user', 'content': str(ex[q])}, {'role': 'assistant', 'content': str(ex[a] if not isinstance(ex[a], list) else ex[a][0])}]
     return None
 from datasets import load_dataset
+import urllib.request
+try: urllib.request.urlopen('https://huggingface.co', timeout=10); print('internet: ok')
+except Exception as e: print('NO INTERNET from this notebook (Kaggle: Settings -> Internet -> On):', type(e).__name__)
+def open_ds(path, cfg, split):
+    args = (path, cfg) if cfg else (path,)
+    try: return load_dataset(*args, split=split, streaming=True, token=HF_TOKEN)
+    except Exception as e1:
+        print(f'  streaming failed ({type(e1).__name__}), trying a normal download')
+        return load_dataset(*args, split=split, token=HF_TOKEN)
 for path, cfg, split in TOPICS.get(TOPIC, []):
     try:
-        ds = load_dataset(path, cfg, split=split, streaming=True, token=HF_TOKEN) if cfg else load_dataset(path, split=split, streaming=True, token=HF_TOKEN)
+        ds = open_ds(path, cfg, split)
         n = 0
         for ex in ds:
             m = to_messages(ex)
