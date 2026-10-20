@@ -30,7 +30,7 @@ MODEL_ID = 'google/gemma-4-31B'            # base weights. Try 'google/gemma-4-E
 ADAPTER_DIR = f'{GDIR}/adapter'; SFT_FILE = f'{GDIR}/sft.jsonl'
 USE_SWE_SMITH_TRAJECTORIES = False          # see the warning above before turning this on
 MAX_LEN = 1536;      # T4s have 15 GB each: keep sequences short (raise on bigger GPUs)
- LORA_R = 16; LORA_ALPHA = 32; LR = 1e-4
+LORA_R = 16; LORA_ALPHA = 32; LR = 1e-4
 TOPIC = 'mmlu'                              # today's topic, see TOPICS in the data cell
 MAX_EXAMPLES_PER_SOURCE = 20000
 CACHE_DIR = '/tmp/hf_cache'            # model download goes here and is deleted after loading (needs ~65 GB free)
