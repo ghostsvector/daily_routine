@@ -123,9 +123,9 @@ def to_messages(ex):
     for q, a in PAIRS:
         if ex.get(q) and ex.get(a):
             if q == 'question' and isinstance(ex.get('choices'), list):     # MMLU-style multiple choice
-                opts = '\n'.join(f'{"ABCD"[i]}. {c}' for i, c in enumerate(ex['choices'][:4])); ai = ex['answer'] if isinstance(ex['answer'], int) else None
+                opts = '\\n'.join(f'{"ABCD"[i]}. {c}' for i, c in enumerate(ex['choices'][:4])); ai = ex['answer'] if isinstance(ex['answer'], int) else None
                 if ai is None: return None
-                return [{'role': 'user', 'content': f"{ex['question']}\n{opts}\nAnswer with the letter."}, {'role': 'assistant', 'content': "ABCD"[ai]}]
+                return [{'role': 'user', 'content': f"{ex['question']}\\n{opts}\\nAnswer with the letter."}, {'role': 'assistant', 'content': "ABCD"[ai]}]
             return [{'role': 'user', 'content': str(ex[q])}, {'role': 'assistant', 'content': str(ex[a] if not isinstance(ex[a], list) else ex[a][0])}]
     return None
 from datasets import load_dataset
