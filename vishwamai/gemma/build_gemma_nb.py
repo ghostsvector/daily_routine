@@ -240,8 +240,10 @@ if os.path.exists(HELD):
         m.eval(); tot = n = 0
         with torch.no_grad():
             for ex in map(encode, held):
-                ids = torch.tensor([ex['input_ids']], device='cuda'); lab = torch.tensor([ex['labels']], device='cuda')
-                k = sum(1 for l in ex['labels'] if l != -100); tot += m(input_ids=ids, labels=lab).loss.item() * k; n += k
+                ids = torch.tensor([ex['input_ids']], device='cuda:0'); lab = torch.tensor([ex['labels']], device='cuda:0')
+                k = sum(1 for l in ex['labels'] if l != -100)
+                with torch.autocast('cuda', dtype=DT): tot += answer_loss(ids, lab).item() * k      # same answer-only loss as training (no giant logits)
+                n += k
         return tot / max(n, 1)
     tuned = nll(model)
     with model.disable_adapter(): base = nll(model)
