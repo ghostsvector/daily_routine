@@ -32,7 +32,8 @@ def wilson(k, n, z=1.96):
     return 100 * (c - h), 100 * (c + h)
 def gold(a): return a.split('####')[-1].strip().replace(',', '')
 def to_num(s):
-    s = re.sub(r'[\$,\s]|\\%|%|\\text\{[^}]*\}|\\!|\\,', '', s or '')
+    s = (s or '').replace('{,}', '')                                   # LaTeX thousands separator: 1{,}234
+    s = re.sub(r'\\text\{[^}]*\}|\\[,!;: ]|\\%|[\$,%\s{}]', '', s)    # \text{..}, spacing macros, $, commas, %, braces
     m = re.findall(r'-?\d+\.?\d*', s)
     return m[-1] if m else None
 def boxed(text):
