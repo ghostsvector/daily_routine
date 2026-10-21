@@ -42,7 +42,7 @@ if not ADAPTER:
     print('/kaggle/input contains:', [os.path.join(d, x) for d, _, fs in os.walk('/kaggle/input') for x in (fs[:3] if fs else []) ][:15] if os.path.exists('/kaggle/input') else 'nothing')
     print('Fix: right side panel -> Add Input -> Notebooks/Your Work -> choose the training notebook (its saved version with the adapter), then re-run THIS cell. '
           'If /kaggle/input still shows nothing, restart the session after adding the input, or upload the adapter to a private HF repo and set ADAPTER_REPO.')
-    raise SystemExit('adapter not found')
+    raise RuntimeError('adapter not found - see the message above')
 print('adapter:', ADAPTER)
 model = PeftModel.from_pretrained(model, ADAPTER, is_trainable=False)
 model.eval(); model.config.use_cache = True
