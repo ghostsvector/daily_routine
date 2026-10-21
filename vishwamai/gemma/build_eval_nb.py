@@ -28,10 +28,13 @@ code(find('from transformers import AutoTokenizer, BitsAndBytesConfig')),
 code('''
 # Find the adapter and attach it. Sources, in order: ADAPTER_REPO (a Hugging Face repo, e.g. a private one you uploaded it to),
 # the folder this session trained in, anything under /kaggle/input (attach the training notebook's output as an input), your WORK folder.
+ADAPTER_PATH = ''          # or set the folder yourself, e.g. '/kaggle/input/vishwamai-qlora/vishwamai/gemma/adapter' (the folder with adapter_config.json)
 ADAPTER_REPO = ''          # e.g. 'VishwamAI/vishwamai-gemma4-31b-lora-v0' (private is fine; needs HF_TOKEN). Leave '' to use Kaggle files.
 from peft import PeftModel
-ADAPTER = None
-if ADAPTER_REPO:
+ADAPTER = ADAPTER_PATH or None
+if ADAPTER:
+    assert os.path.exists(f'{ADAPTER}/adapter_config.json'), f'no adapter_config.json in {ADAPTER}'
+elif ADAPTER_REPO:
     from huggingface_hub import snapshot_download
     ADAPTER = snapshot_download(ADAPTER_REPO, token=HF_TOKEN, allow_patterns=['adapter_*'])
 else:
@@ -39,7 +42,7 @@ else:
     cands = [c for c in cands if os.path.exists(c)]
     if cands: ADAPTER = os.path.dirname(cands[0])
 if not ADAPTER:
-    print('/kaggle/input contains:', [os.path.join(d, x) for d, _, fs in os.walk('/kaggle/input') for x in (fs[:3] if fs else []) ][:15] if os.path.exists('/kaggle/input') else 'nothing')
+    print('/kaggle/input contains:', [os.path.join(d, x) for d, _, fs in os.walk('/kaggle/input') for x in fs][:30] if os.path.exists('/kaggle/input') else 'nothing')
     print('Fix: right side panel -> Add Input -> Notebooks/Your Work -> choose the training notebook (its saved version with the adapter), then re-run THIS cell. '
           'If /kaggle/input still shows nothing, restart the session after adding the input, or upload the adapter to a private HF repo and set ADAPTER_REPO.')
     raise RuntimeError('adapter not found - see the message above')
