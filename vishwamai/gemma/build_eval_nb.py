@@ -26,26 +26,37 @@ code(find('def get_hf_token')),
 code(find('# Guard:')),
 code(find('from transformers import AutoTokenizer, BitsAndBytesConfig')),
 code('''
-# Find the adapter and attach it. Sources, in order: ADAPTER_REPO (a Hugging Face repo, e.g. a private one you uploaded it to),
-# the folder this session trained in, anything under /kaggle/input (attach the training notebook's output as an input), your WORK folder.
-ADAPTER_PATH = ''          # or set the folder yourself, e.g. '/kaggle/input/vishwamai-qlora/vishwamai/gemma/adapter' (the folder with adapter_config.json)
-ADAPTER_REPO = ''          # e.g. 'VishwamAI/vishwamai-gemma4-31b-lora-v0' (private is fine; needs HF_TOKEN). Leave '' to use Kaggle files.
+# Find the adapter and attach it. Order: ADAPTER_PATH (a folder you set) -> ADAPTER_REPO (Hugging Face) -> files already here
+# (this session / attached inputs / WORK) -> download the public Kaggle notebook output (kagglehub, then the kaggle CLI).
+ADAPTER_PATH = ''                          # e.g. '/kaggle/input/vishwamai-qlora/vishwamai/gemma/adapter'
+ADAPTER_REPO = ''                          # e.g. 'VishwamAI/vishwamai-gemma4-31b-lora-v0' (private is fine; needs HF_TOKEN)
+KAGGLE_NOTEBOOK = 'bmentech/vishwamai-qlora'
 from peft import PeftModel
+def find_adapter(root):
+    hits = glob.glob(f'{root}/**/adapter_config.json', recursive=True)
+    return os.path.dirname(hits[0]) if hits else None
 ADAPTER = ADAPTER_PATH or None
 if ADAPTER:
     assert os.path.exists(f'{ADAPTER}/adapter_config.json'), f'no adapter_config.json in {ADAPTER}'
-elif ADAPTER_REPO:
+if not ADAPTER and ADAPTER_REPO:
     from huggingface_hub import snapshot_download
     ADAPTER = snapshot_download(ADAPTER_REPO, token=HF_TOKEN, allow_patterns=['adapter_*'])
-else:
-    cands = [f'{ADAPTER_DIR}/adapter_config.json'] + glob.glob('/kaggle/input/**/adapter_config.json', recursive=True) + glob.glob(f'{WORK}/**/adapter_config.json', recursive=True)
-    cands = [c for c in cands if os.path.exists(c)]
-    if cands: ADAPTER = os.path.dirname(cands[0])
+for root in (ADAPTER_DIR, '/kaggle/input', WORK):
+    if not ADAPTER and os.path.exists(root): ADAPTER = find_adapter(root)
+if not ADAPTER and KAGGLE_NOTEBOOK:
+    print('adapter not found locally; downloading the output of', KAGGLE_NOTEBOOK)
+    dest = '/kaggle/working/adapter_dl'; os.makedirs(dest, exist_ok=True)
+    try:
+        import kagglehub
+        ADAPTER = find_adapter(kagglehub.notebook_output_download(KAGGLE_NOTEBOOK))
+    except Exception as e:
+        print('  kagglehub failed:', type(e).__name__, str(e)[:200])
+    if not ADAPTER:
+        r = subprocess.run(['kaggle', 'kernels', 'output', KAGGLE_NOTEBOOK, '-p', dest], capture_output=True, text=True)
+        print('  kaggle CLI:', (r.stdout + r.stderr)[-400:]); ADAPTER = find_adapter(dest)
 if not ADAPTER:
     print('/kaggle/input contains:', [os.path.join(d, x) for d, _, fs in os.walk('/kaggle/input') for x in fs][:30] if os.path.exists('/kaggle/input') else 'nothing')
-    print('Fix: right side panel -> Add Input -> Notebooks/Your Work -> choose the training notebook (its saved version with the adapter), then re-run THIS cell. '
-          'If /kaggle/input still shows nothing, restart the session after adding the input, or upload the adapter to a private HF repo and set ADAPTER_REPO.')
-    raise RuntimeError('adapter not found - see the message above')
+    raise RuntimeError('adapter not found. Use Add Input -> your vishwamai-qlora notebook output, or set ADAPTER_PATH / ADAPTER_REPO, then re-run this cell.')
 print('adapter:', ADAPTER)
 model = PeftModel.from_pretrained(model, ADAPTER, is_trainable=False)
 model.eval(); model.config.use_cache = True
