@@ -73,9 +73,18 @@ if not getattr(tok, 'chat_template', None):          # same template logic as in
         tok.chat_template = ("{{ bos_token }}{% for m in messages %}<start_of_turn>{{ 'model' if m['role'] == 'assistant' else m['role'] }}\\n"
                              "{{ m['content'] }}<end_of_turn>\\n{% endfor %}{% if add_generation_prompt %}<start_of_turn>model\\n{% endif %}")
 LET = 'ABCDEFGHIJ'
-let_ids = [tok.encode(c, add_special_tokens=False) for c in LET]
-assert all(len(x) == 1 for x in let_ids), 'letters are not single tokens in this tokenizer'
-let_ids = [x[0] for x in let_ids]
+# Every spelling of a letter the model might emit first: 'A', ' A', '\u2581A' (SentencePiece space marker). The score for a letter is the
+# log-sum-exp of its spellings, so a model that prefers ' A' over 'A' is not penalised for a formatting habit (this made the first run unfair to the base model).
+unk = getattr(tok, 'unk_token_id', None); let_var = []
+for c in LET:
+    ids = set()
+    for form in (c, ' ' + c):
+        e = tok.encode(form, add_special_tokens=False)
+        if e: ids.add(e[-1])
+    t = tok.convert_tokens_to_ids('\u2581' + c)
+    if t is not None and t != unk: ids.add(t)
+    let_var.append(sorted(ids))
+print('letter token ids:', {LET[i]: let_var[i] for i in range(4)})
 
 def build(q, opts):
     body = q + '\\n' + '\\n'.join(f'{LET[i]}. {o}' for i, o in enumerate(opts)) + '\\nAnswer with the letter.'
@@ -108,7 +117,7 @@ def run(items, tag):
         with torch.autocast('cuda', dtype=DT):
             try: lg = model(input_ids=ids, logits_to_keep=1).logits[0, -1]
             except TypeError: lg = model(input_ids=ids).logits[0, -1]
-        pred = int(torch.argmax(lg[let_ids[:n_opt]]).item()); ok.append(int(pred == gold))
+        lg = lg.float(); pred = int(torch.argmax(torch.stack([torch.logsumexp(lg[torch.tensor(v, device=lg.device)], 0) for v in let_var[:n_opt]])).item()); ok.append(int(pred == gold))
         if (j + 1) % 50 == 0: print(f'  {tag}: {j+1}/{len(items)}  acc so far {sum(ok)/len(ok):.3f}  ({(time.time()-t0)/60:.1f} min)')
     return ok
 
