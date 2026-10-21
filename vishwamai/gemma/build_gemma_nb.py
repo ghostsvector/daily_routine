@@ -33,6 +33,9 @@ os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'    # must be 
 MAX_LEN = 512;      # T4s have 15 GB each: keep sequences short (raise on bigger GPUs)
 LORA_R = 16; LORA_ALPHA = 32; LR = 1e-4
 TOPIC = 'mmlu'                              # today's topic, see TOPICS in the data cell
+REPLAY_TOPICS = []                          # earlier topics to mix back in so they are not forgotten, e.g. ['mmlu'] on the mmlu_pro day
+REPLAY_FRAC = 0.25                          # share of today's examples that come from the replay topics
+RESUME_FROM = ''                            # folder of an adapter to continue from (e.g. the attached Kaggle input); '' = start fresh or use ADAPTER_DIR
 MAX_EXAMPLES_PER_SOURCE = 20000
 CACHE_DIR = '/tmp/hf_cache'            # model download goes here and is deleted after loading (needs ~65 GB free)
 TIME_BUDGET_MIN = 180; BATCH_TOKENS_ACCUM = 16   # sequences per optimiser step (micro-batch is 1 sequence)
@@ -103,6 +106,12 @@ targets = [n for n, m in model.named_modules()
 print(len(targets), 'LoRA target modules, e.g.', targets[:2])
 assert targets, 'no target modules found - print model.named_modules() and adjust SUFFIX'
 model.gradient_checkpointing_enable(); model.enable_input_require_grads(); model.config.use_cache = False   # (not prepare_model_for_kbit_training: it would upcast the big embedding table to fp32)
+if not os.path.exists(f'{ADAPTER_DIR}/adapter_config.json'):
+    src = RESUME_FROM or (os.path.dirname(glob.glob('/kaggle/input/**/adapter_config.json', recursive=True)[0]) if glob.glob('/kaggle/input/**/adapter_config.json', recursive=True) else '')
+    if src and os.path.exists(f'{src}/adapter_config.json'):
+        os.makedirs(ADAPTER_DIR, exist_ok=True)
+        for f in ('adapter_config.json', 'adapter_model.safetensors'): shutil.copy(f'{src}/{f}', ADAPTER_DIR)
+        print('continuing from the adapter in', src)
 if os.path.exists(f'{ADAPTER_DIR}/adapter_config.json'):
     model = PeftModel.from_pretrained(model, ADAPTER_DIR, is_trainable=True); print('resumed adapter from', ADAPTER_DIR)
 else:
@@ -157,17 +166,24 @@ def open_ds(path, cfg, split):
     except Exception as e1:
         print(f'  streaming failed ({type(e1).__name__}), trying a normal download')
         return load_dataset(*args, split=split, token=HF_TOKEN)
-for path, cfg, split in TOPICS.get(TOPIC, []):
-    try:
-        ds = open_ds(path, cfg, split)
-        n = 0
-        for ex in ds:
-            m = to_messages(ex)
-            if m: rows.append({'messages': m}); n += 1
-            if n >= MAX_EXAMPLES_PER_SOURCE: break
-        print(f'topic {TOPIC}: {path}: {n} examples' + ('' if n else '  (no usable columns - check the schema)'))
-    except Exception as e:
-        print(f'topic {TOPIC}: {path} [{cfg}/{split}] SKIPPED: {type(e).__name__}: {str(e)[:300]}')
+def load_topic_rows(topic, limit):
+    out = []
+    for path, cfg, split in TOPICS.get(topic, []):
+        try:
+            ds = open_ds(path, cfg, split); n = 0
+            for ex in ds:
+                m = to_messages(ex)
+                if m: out.append({'messages': m}); n += 1
+                if n >= limit: break
+            print(f'topic {topic}: {path}: {n} examples' + ('' if n else '  (no usable columns - check the schema)'))
+        except Exception as e:
+            print(f'topic {topic}: {path} [{cfg}/{split}] SKIPPED: {type(e).__name__}: {str(e)[:300]}')
+    return out
+rows += load_topic_rows(TOPIC, MAX_EXAMPLES_PER_SOURCE)
+if REPLAY_TOPICS and rows:
+    n_replay = int(len(rows) * REPLAY_FRAC / (1 - REPLAY_FRAC)); per = max(1, n_replay // len(REPLAY_TOPICS))
+    for t in REPLAY_TOPICS:
+        got = load_topic_rows(t, per); rows += got[:per]; print(f'replay {t}: {min(len(got), per)} examples mixed in')
 assert rows, ('no training data. Read the "topic ... SKIPPED" lines printed just above this error: they say why each dataset failed '
               f'(no internet in the notebook? dataset id wrong?). Or create {SFT_FILE} with one {{"messages": [...]}} per line.')
 random.Random(0).shuffle(rows)
