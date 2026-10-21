@@ -146,6 +146,41 @@ os.makedirs(f'{GDIR}/results', exist_ok=True)
 json.dump(dict(model=MODEL_ID, adapter=ADAPTER, time=time.strftime('%Y-%m-%d %H:%M'), results=results), open(f'{GDIR}/results/eval_{time.strftime("%Y%m%d_%H%M")}.json', 'w'), indent=1)
 print('\\nsaved to', f'{GDIR}/results/')
 '''),
+code('''
+# Publish the adapter to Hugging Face (private by default). Set PUBLISH = True when you want to push.
+PUBLISH = False
+REPO = 'VishwamAI/vishwamai-gemma4-31b-lora-v0'; PRIVATE = True
+if PUBLISH:
+    from huggingface_hub import HfApi
+    pub = '/kaggle/working/pub' if os.path.exists('/kaggle/working') else './pub'; shutil.rmtree(pub, ignore_errors=True); os.makedirs(pub)
+    for f in ('adapter_config.json', 'adapter_model.safetensors'): shutil.copy(f'{ADAPTER}/{f}', pub)
+    rows = ''.join(f"| {k} | {v['n']} | {v['tuned']:.3f} ({v['tuned_ci'][0]:.3f}-{v['tuned_ci'][1]:.3f}) | {v['base']:.3f} |\\n" for k, v in results.items())
+    card = f"""---
+license: apache-2.0
+base_model: {MODEL_ID}
+library_name: peft
+---
+# VishwamAI on Gemma 4 31B (LoRA adapter, v0)
+
+LoRA adapter trained on top of [{MODEL_ID}](https://huggingface.co/{MODEL_ID}) (Apache-2.0, Google). This is a **derived model**: its capability comes from Gemma 4; the adapter was
+trained for a short run on multiple-choice exam-style data (MMLU auxiliary-train + ARC train splits; no benchmark test questions) to answer with a letter.
+
+## Measured results (our own, 95% Wilson intervals, random test samples)
+| set | n questions | adapter accuracy | plain {MODEL_ID.split('/')[-1]} accuracy (same prompt format) |
+|---|---|---|---|
+{rows}
+Caveats: small samples (about +-5 points); the plain-model column depends on answer formatting and is not a fair measure of the base model's knowledge;
+not comparable to published leaderboard numbers.
+
+Load with `peft`: `PeftModel.from_pretrained(base_model, "{REPO}")` on a 4-bit or bf16 {MODEL_ID}.
+"""
+    open(f'{pub}/README.md', 'w').write(card)
+    api = HfApi(token=get_hf_token(required=True)); api.create_repo(REPO, private=PRIVATE, exist_ok=True)
+    api.upload_folder(folder_path=pub, repo_id=REPO, commit_message='VishwamAI Gemma 4 31B LoRA adapter v0')
+    print('uploaded: https://huggingface.co/' + REPO, '(private)' if PRIVATE else '(public)')
+else:
+    print('PUBLISH is False: nothing uploaded. Run the evaluation first, then set PUBLISH = True.')
+'''),
 md('''## How to read the result
 - If the two intervals overlap heavily and the sign-test p-value is above 0.05, the adapter did **not** measurably change MMLU on this sample. That is an honest result, not a failure of the notebook.
 - A gain on MMLU-Pro from MMLU-style training would be a bonus; no change is the expected outcome.
