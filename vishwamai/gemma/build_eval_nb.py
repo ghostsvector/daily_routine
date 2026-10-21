@@ -26,12 +26,24 @@ code(find('def get_hf_token')),
 code(find('# Guard:')),
 code(find('from transformers import AutoTokenizer, BitsAndBytesConfig')),
 code('''
-# Find the adapter and attach it
+# Find the adapter and attach it. Sources, in order: ADAPTER_REPO (a Hugging Face repo, e.g. a private one you uploaded it to),
+# the folder this session trained in, anything under /kaggle/input (attach the training notebook's output as an input), your WORK folder.
+ADAPTER_REPO = ''          # e.g. 'VishwamAI/vishwamai-gemma4-31b-lora-v0' (private is fine; needs HF_TOKEN). Leave '' to use Kaggle files.
 from peft import PeftModel
-cands = [f'{ADAPTER_DIR}/adapter_config.json'] + glob.glob('/kaggle/input/**/adapter_config.json', recursive=True) + glob.glob(f'{WORK}/**/adapter_config.json', recursive=True)
-cands = [c for c in cands if os.path.exists(c)]
-assert cands, 'adapter not found: add the training notebook output as an input, or set ADAPTER_DIR'
-ADAPTER = os.path.dirname(cands[0]); print('adapter:', ADAPTER)
+ADAPTER = None
+if ADAPTER_REPO:
+    from huggingface_hub import snapshot_download
+    ADAPTER = snapshot_download(ADAPTER_REPO, token=HF_TOKEN, allow_patterns=['adapter_*'])
+else:
+    cands = [f'{ADAPTER_DIR}/adapter_config.json'] + glob.glob('/kaggle/input/**/adapter_config.json', recursive=True) + glob.glob(f'{WORK}/**/adapter_config.json', recursive=True)
+    cands = [c for c in cands if os.path.exists(c)]
+    if cands: ADAPTER = os.path.dirname(cands[0])
+if not ADAPTER:
+    print('/kaggle/input contains:', [os.path.join(d, x) for d, _, fs in os.walk('/kaggle/input') for x in (fs[:3] if fs else []) ][:15] if os.path.exists('/kaggle/input') else 'nothing')
+    print('Fix: right side panel -> Add Input -> Notebooks/Your Work -> choose the training notebook (its saved version with the adapter), then re-run THIS cell. '
+          'If /kaggle/input still shows nothing, restart the session after adding the input, or upload the adapter to a private HF repo and set ADAPTER_REPO.')
+    raise SystemExit('adapter not found')
+print('adapter:', ADAPTER)
 model = PeftModel.from_pretrained(model, ADAPTER, is_trainable=False)
 model.eval(); model.config.use_cache = True
 '''),
