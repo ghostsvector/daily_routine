@@ -31,15 +31,34 @@ def get_hf_token():
         from getpass import getpass; t = getpass('Hugging Face token with WRITE access (hidden): ')
     return t
 
+KAGGLE_NOTEBOOK = 'bmentech/vishwamai-qlora'        # public training notebook; used as a fallback download if the adapter is not attached
+
+def find_in(root):
+    hits = glob.glob(f'{root}/**/adapter_config.json', recursive=True)
+    return os.path.dirname(hits[0]) if hits else None
+
 def find_adapter():
-    if ADAPTER_PATH: return ADAPTER_PATH
+    if ADAPTER_PATH and os.path.exists(f'{ADAPTER_PATH}/adapter_config.json'): return ADAPTER_PATH
+    if ADAPTER_PATH: print('ADAPTER_PATH has no adapter_config.json, searching instead:', ADAPTER_PATH)
     for root in ('/kaggle/working', '/kaggle/input', '/content', '.'):
-        hits = glob.glob(f'{root}/**/adapter_config.json', recursive=True)
-        if hits: return os.path.dirname(hits[0])
-    return None
+        if os.path.exists(root) and find_in(root): return find_in(root)
+    print('not attached; trying to download the output of', KAGGLE_NOTEBOOK)
+    try:
+        import kagglehub
+        p = find_in(kagglehub.notebook_output_download(KAGGLE_NOTEBOOK))
+        if p: return p
+    except Exception as e:
+        print('  kagglehub failed:', type(e).__name__, str(e)[:200])
+    import subprocess
+    os.makedirs('/kaggle/working/adapter_dl', exist_ok=True)
+    r = subprocess.run(['kaggle', 'kernels', 'output', KAGGLE_NOTEBOOK, '-p', '/kaggle/working/adapter_dl'], capture_output=True, text=True)
+    print('  kaggle CLI:', (r.stdout + r.stderr)[-300:])
+    return find_in('/kaggle/working/adapter_dl')
 
 ADAPTER = find_adapter()
-assert ADAPTER and os.path.exists(f'{ADAPTER}/adapter_model.safetensors'), 'adapter not found: attach the training notebook output as an input or set ADAPTER_PATH'
+if not ADAPTER:
+    print('/kaggle/input contains:', [os.path.join(d, x) for d, _, fs in os.walk('/kaggle/input') for x in fs][:30] if os.path.exists('/kaggle/input') else 'nothing')
+assert ADAPTER and os.path.exists(f'{ADAPTER}/adapter_model.safetensors'), 'adapter not found: Add Input -> your vishwamai-qlora notebook output, or set ADAPTER_PATH to the folder that has adapter_config.json'
 print('adapter folder:', ADAPTER, '|', round(os.path.getsize(f'{ADAPTER}/adapter_model.safetensors') / 1e6), 'MB')
 '''),
 code('''
