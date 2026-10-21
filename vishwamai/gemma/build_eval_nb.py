@@ -35,9 +35,10 @@ from peft import PeftModel
 def find_adapter(root):
     hits = glob.glob(f'{root}/**/adapter_config.json', recursive=True)
     return os.path.dirname(hits[0]) if hits else None
-ADAPTER = ADAPTER_PATH or None
-if ADAPTER:
-    assert os.path.exists(f'{ADAPTER}/adapter_config.json'), f'no adapter_config.json in {ADAPTER}'
+ADAPTER = None
+if ADAPTER_PATH:
+    if os.path.exists(f'{ADAPTER_PATH}/adapter_config.json'): ADAPTER = ADAPTER_PATH
+    else: print(f'ADAPTER_PATH has no adapter_config.json ({ADAPTER_PATH}) - ignoring it and searching instead')
 if not ADAPTER and ADAPTER_REPO:
     from huggingface_hub import snapshot_download
     ADAPTER = snapshot_download(ADAPTER_REPO, token=HF_TOKEN, allow_patterns=['adapter_*'])
